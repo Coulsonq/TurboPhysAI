@@ -19,4 +19,4 @@ turbo-physai run \
     --log-interval 1 \
     --save-interval 10000 \
     --no-wandb-enabled \
-    2>&1 | tee -a "/home/openpi_ws/openpi_TurboPhysAI/output/logs/pi05_libero_8gpu_bs32_by_model_${STAMP}.log"
+    2>&1 | tee -a "${LOG_DIR}/pi05_libero_8gpu_bs32_by_model_${STAMP}.log"
