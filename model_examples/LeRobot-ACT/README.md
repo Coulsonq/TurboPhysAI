@@ -161,5 +161,5 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
       --log_freq=1 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
-  2>&1 | tee -a /workspace/act_runs/turbo_10step.log
+  2>&1 | tee -a /workspace/act_runs/turbo_100step.log
 ```
