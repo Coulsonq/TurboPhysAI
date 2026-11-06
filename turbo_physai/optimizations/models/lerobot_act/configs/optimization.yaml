@@ -1,0 +1,7 @@
+schema_version: turbophysai/optimization-config/v1
+kind: OptimizationConfig
+metadata:
+  id: model.lerobot_act.baseline
+  version: "1.0.0"
+optimization_modules: []
+optimization_groups: []
