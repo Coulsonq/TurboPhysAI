@@ -164,6 +164,6 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
       --steps=10000 \
       --log_freq=10 \
       --wandb.enable=false \
-      --output_dir=/workspace/act_runs/turbo_10step \
+      --output_dir="/workspace/act_runs/turbo_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}" \
   2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
