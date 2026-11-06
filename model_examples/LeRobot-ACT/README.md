@@ -104,7 +104,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 4. 运行训练
 
-将 `HIP_VISIBLE_DEVICES` 设置为实际空闲卡。示例使用 `pyav` 解码，单卡 batch size 8，训练 10 step。
+以下示例均为单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`，训练 `steps=10`。可按需修改对应参数。
 
 ### 4.1 原生训练
 
@@ -117,14 +117,18 @@ TRAIN_ARGS=(
   --dataset.repo_id=lerobot/aloha_mobile_cabinet
   --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet
   --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a
-  --dataset.video_backend=pyav --batch_size=8 --steps=10 --log_freq=1
+  --dataset.video_backend=pyav --log_freq=1
   --seed=42 --wandb.enable=false
 )
 test ! -e /workspace/act_runs/native_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   python -m lerobot.scripts.lerobot_train \
-  "${TRAIN_ARGS[@]}" --output_dir=/workspace/act_runs/native_10step \
+  "${TRAIN_ARGS[@]}" \
+  --batch_size=8 \
+  --num_workers=4 \
+  --steps=10 \
+  --output_dir=/workspace/act_runs/native_10step \
   2>&1 | tee /workspace/act_runs/native_10step.log
 ```
 
@@ -151,7 +155,11 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   python -m turbo_physai.cli run \
   --optimization-config /workspace/optimization.empty.yaml --disable-numa --log-report -- \
   python -m lerobot.scripts.lerobot_train \
-  "${TRAIN_ARGS[@]}" --output_dir=/workspace/act_runs/turbo_10step \
+  "${TRAIN_ARGS[@]}" \
+  --batch_size=8 \
+  --num_workers=4 \
+  --steps=10 \
+  --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee /workspace/act_runs/turbo_10step.log
 ```
 
