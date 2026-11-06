@@ -140,9 +140,9 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```bash
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
-BATCH_SIZE=8
 STAMP="$(date +%Y%m%d_%H%M%S)"
-env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
+BATCH_SIZE=8
+env -u PYTHONPATH HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
     --optimization-config /workspace/TurboPhysAI/model_examples/LeRobot-ACT/configs/optimization.yaml \
@@ -162,5 +162,5 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
       --log_freq=1 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
-  2>&1 | tee -a "/workspace/act_runs/turbo_1hcu_bs${BATCH_SIZE}_${STAMP}.log"
+  2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_bs${BATCH_SIZE}_${STAMP}.log"
 ```
