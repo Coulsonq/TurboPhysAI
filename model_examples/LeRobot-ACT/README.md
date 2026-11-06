@@ -42,9 +42,44 @@ docker exec -it lerobot-act-turbophysai-v2 bash
 
 ## 2. 安装环境及源码
 
-### 2.1 安装环境
+### 2.1 拉取官方源码
 
-直接安装到容器的全局 Python 环境。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换镜像自带的厂商版本；其余已有依赖可能因版本要求被替换。清除继承的 `PYTHONPATH`，保证使用容器内的默认 Python 包路径。
+拉取固定版本的 LeRobot 官方源码；安装依赖后再以可编辑方式安装。
+
+```bash
+(
+cd /workspace &&
+test ! -e lerobot && test ! -L lerobot &&
+git init lerobot &&
+git -C lerobot remote add origin https://github.com/huggingface/lerobot.git &&
+git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 &&
+git -C lerobot checkout --detach FETCH_HEAD
+)
+```
+
+### 2.2 拉取并安装 TurboPhysAI
+
+TurboPhysAI 构建需要 `setuptools` 提供的 `pkg_resources`，因此先安装构建所需的版本；其余训练依赖在下一步安装。
+
+```bash
+(
+cd /workspace &&
+test ! -e TurboPhysAI && test ! -L TurboPhysAI &&
+git clone --branch ACT-TurboPhysAI \
+  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI &&
+git -C TurboPhysAI rev-parse HEAD &&
+env -u PYTHONPATH python -m pip install --no-deps \
+  --index-url https://pypi.tuna.tsinghua.edu.cn/simple 'setuptools>=71,<81' &&
+env -u PYTHONPATH python -m pip install \
+  --no-deps --no-build-isolation -e /workspace/TurboPhysAI
+)
+```
+
+TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工具。此前短训通过源码运行 Turbo，此安装方式尚未在本镜像中实测。
+
+### 2.3 安装环境
+
+从 [requirements.txt](requirements.txt) 安装 ACT 训练依赖到容器的全局 Python 环境。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换镜像自带的厂商版本；其余已有依赖可能因版本要求被替换。清除继承的 `PYTHONPATH`，保证使用容器内的默认 Python 包路径。
 
 ```bash
 (
@@ -52,13 +87,7 @@ test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.js
 env -u PYTHONPATH python -m pip install \
   --dry-run --report /workspace/act-deps-plan.json \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  'numpy>=2,<2.3' 'opencv-python-headless>=4.9,<4.14' 'Pillow>=10,<13' \
-  'einops>=0.8,<0.9' 'draccus==0.10.0' 'huggingface-hub>=1,<2' \
-  'requests>=2.32,<3' 'gymnasium>=1.1.1,<2' 'safetensors>=0.4.3,<1' \
-  'packaging>=24.2,<26' 'termcolor>=2.4,<4' 'tqdm>=4.66,<5' \
-  'datasets>=4.7,<5' 'pandas>=2,<3' 'pyarrow>=21,<30' 'av>=15,<16' \
-  'jsonlines>=4,<5' 'wandb>=0.24,<0.28' 'accelerate>=1.14,<2' \
-  'PyYAML>=6.0' 'setuptools>=71,<81' scipy &&
+  -r /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt &&
 
 env -u PYTHONPATH python - <<'PY' &&
 import json, subprocess, sys
@@ -71,45 +100,14 @@ if items:
                     'https://pypi.tuna.tsinghua.edu.cn/simple',
                     *(f'{name}=={version}' for name, version in items)], check=True)
 PY
+env -u PYTHONPATH python -m pip install \
+  --no-deps --no-build-isolation -e /workspace/lerobot &&
 env -u PYTHONPATH python -c \
   'import torch, torchvision, av; print(torch.__version__, torch.__file__); print(torchvision.__version__, torchvision.__file__); print("av", av.__version__)'
 )
 ```
 
 `pip check` 会报告上述 Torch 和 torchvision 版本不符合上游约束；若有其他依赖错误，需要另行处理。
-
-### 2.2 拉取官方源码
-
-拉取固定版本的 LeRobot 官方源码，并以可编辑方式安装。
-
-```bash
-(
-cd /workspace &&
-test ! -e lerobot && test ! -L lerobot &&
-git init lerobot &&
-git -C lerobot remote add origin https://github.com/huggingface/lerobot.git &&
-git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 &&
-git -C lerobot checkout --detach FETCH_HEAD &&
-env -u PYTHONPATH python -m pip install \
-  --no-deps --no-build-isolation -e /workspace/lerobot
-)
-```
-
-### 2.3 拉取并安装 TurboPhysAI
-
-```bash
-(
-cd /workspace &&
-test ! -e TurboPhysAI && test ! -L TurboPhysAI &&
-git clone --branch ACT-TurboPhysAI \
-  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI &&
-git -C TurboPhysAI rev-parse HEAD &&
-env -u PYTHONPATH python -m pip install \
-  --no-deps --no-build-isolation -e /workspace/TurboPhysAI
-)
-```
-
-TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工具。此前短训通过源码运行 Turbo，此安装方式尚未在本镜像中实测。
 
 ## 3. 下载数据和权重
 
@@ -224,3 +222,4 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```
 
 空配置报告 `applied=0 skipped=0 blocked=0 failed=0`，表示未应用优化；训练结果以日志为准。完整训练、多卡、精度及性能尚未验证。
+
