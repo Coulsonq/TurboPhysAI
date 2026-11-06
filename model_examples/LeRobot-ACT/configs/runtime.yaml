@@ -1,0 +1,4 @@
+schema_version: turbophysai/runtime-config/v1
+kind: RuntimeConfig
+process:
+  numa: false
