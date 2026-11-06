@@ -47,14 +47,12 @@ docker exec -it lerobot-act-turbophysai-v2 bash
 拉取固定版本的 LeRobot 官方源码；安装依赖后再以可编辑方式安装。
 
 ```bash
-(
 cd /workspace &&
 test ! -e lerobot && test ! -L lerobot &&
 git init lerobot &&
 git -C lerobot remote add origin https://github.com/huggingface/lerobot.git &&
 git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 &&
 git -C lerobot checkout --detach FETCH_HEAD
-)
 ```
 
 ### 2.2 拉取并安装 TurboPhysAI
@@ -62,7 +60,6 @@ git -C lerobot checkout --detach FETCH_HEAD
 TurboPhysAI 构建需要 `setuptools` 提供的 `pkg_resources`，因此先安装构建所需的版本；其余训练依赖在下一步安装。
 
 ```bash
-(
 cd /workspace &&
 test ! -e TurboPhysAI && test ! -L TurboPhysAI &&
 git clone --branch ACT-TurboPhysAI \
@@ -72,7 +69,6 @@ env -u PYTHONPATH python -m pip install --no-deps \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple 'setuptools>=71,<81' &&
 env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
-)
 ```
 
 TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工具。此前短训通过源码运行 Turbo，此安装方式尚未在本镜像中实测。
@@ -82,7 +78,6 @@ TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工�
 从 [requirements.txt](requirements.txt) 安装 ACT 训练依赖到容器的全局 Python 环境。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换镜像自带的厂商版本；其余已有依赖可能因版本要求被替换。清除继承的 `PYTHONPATH`，保证使用容器内的默认 Python 包路径。
 
 ```bash
-(
 test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.json &&
 env -u PYTHONPATH python -m pip install \
   --dry-run --report /workspace/act-deps-plan.json \
@@ -104,7 +99,6 @@ env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot &&
 env -u PYTHONPATH python -c \
   'import torch, torchvision, av; print(torch.__version__, torch.__file__); print(torchvision.__version__, torchvision.__file__); print("av", av.__version__)'
-)
 ```
 
 `pip check` 会报告上述 Torch 和 torchvision 版本不符合上游约束；若有其他依赖错误，需要另行处理。
@@ -118,17 +112,10 @@ env -u PYTHONPATH python -c \
 使用 `huggingface_hub` 提供的 `hf` 命令从 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)下载：
 
 ```bash
-(
-test ! -L /workspace/act_assets &&
-test ! -L /workspace/act_assets/data &&
-test ! -e /workspace/act_assets/data/LeRobot-ACT &&
-test ! -L /workspace/act_assets/data/LeRobot-ACT &&
-env -u PYTHONPATH -u HF_ENDPOINT -u HF_HUB_OFFLINE \
-  hf download lerobot/aloha_mobile_cabinet \
+hf download lerobot/aloha_mobile_cabinet \
   --repo-type dataset \
   --revision 7a752b39f7e69de7e38aee485a6bab07528a061a \
   --local-dir /workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet
-)
 ```
 
 ### 3.2 下载权重
@@ -136,20 +123,9 @@ env -u PYTHONPATH -u HF_ENDPOINT -u HF_HUB_OFFLINE \
 通过 torchvision 官方接口下载 `ResNet18_Weights.IMAGENET1K_V1` 到训练使用的 Torch 缓存目录。这是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
 
 ```bash
-(
-test ! -L /workspace/act_assets &&
-test ! -L /workspace/act_assets/ckpt &&
-test ! -e /workspace/act_assets/ckpt/LeRobot-ACT &&
-test ! -L /workspace/act_assets/ckpt/LeRobot-ACT &&
-env -u PYTHONPATH TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
-  python -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(progress=True, check_hash=True)' &&
-printf '%s  %s\n' \
-  'f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec' \
-  '/workspace/act_assets/ckpt/LeRobot-ACT/torch/hub/checkpoints/resnet18-f37072fd.pth' | sha256sum -c -
-)
+TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
+  python -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(check_hash=True)'
 ```
-
-以上命令要求对应目标目录尚不存在，以免覆盖已有数据。
 
 ## 4. 运行训练
 
@@ -205,5 +181,6 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```
 
 空配置报告 `applied=0 skipped=0 blocked=0 failed=0`，表示未应用优化；训练结果以日志为准。完整训练、多卡、精度及性能尚未验证。
+
 
 
