@@ -76,7 +76,14 @@ python -m pip install \
 
 python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
+
+apt-get update
+apt-get install -y --no-install-recommends libavdevice58
+python -m pip install --no-deps \
+  --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
+
+TorchCodec 0.12 超出当前 LeRobot 声明的 `<0.12` 范围，目前已完成解码验证，完整训练和精度仍需验证。
 
 ## 3. 下载数据和权重
 
@@ -122,7 +129,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
     --dataset.repo_id=lerobot/aloha_mobile_cabinet \
     --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
     --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
-    --dataset.video_backend=pyav \
+    --dataset.video_backend=torchcodec \
     --batch_size="${BATCH_SIZE}" \
     --num_workers=4 \
     --steps=10 \
@@ -158,7 +165,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
       --dataset.repo_id=lerobot/aloha_mobile_cabinet \
       --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
       --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
-      --dataset.video_backend=pyav \
+      --dataset.video_backend=torchcodec \
       --batch_size="${BATCH_SIZE}" \
       --num_workers=4 \
       --prefetch_factor=1 \
