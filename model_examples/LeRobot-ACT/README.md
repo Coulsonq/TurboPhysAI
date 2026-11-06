@@ -40,24 +40,9 @@ docker exec -it lerobot-act-turbophysai-v2 bash
 
 后续命令均在容器内执行。
 
-## 2. 下载源码并安装依赖
+## 2. 安装环境及源码
 
-固定源码版本：LeRobot `3f2179f3b69708b6ad009b2e7685dd9d05269ee1`、TurboPhysAI `b2bb3eb9a7c342a88a350e863f0dd7299784ad26`。
-
-```bash
-(
-set -Eeuo pipefail
-cd /workspace
-test ! -e lerobot && test ! -L lerobot
-test ! -e TurboPhysAI && test ! -L TurboPhysAI
-git init lerobot
-git -C lerobot remote add origin https://github.com/huggingface/lerobot.git
-git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1
-git -C lerobot checkout --detach FETCH_HEAD
-git clone https://github.com/HYGON-AI/TurboPhysAI.git TurboPhysAI
-git -C TurboPhysAI checkout --detach b2bb3eb9a7c342a88a350e863f0dd7299784ad26
-)
-```
+### 2.1 安装环境
 
 创建独立环境并保留镜像自带的 Torch。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换厂商版本；清除继承的 `PYTHONPATH` 以保证虚拟环境生效。
 
@@ -89,14 +74,46 @@ if items:
                     'https://pypi.tuna.tsinghua.edu.cn/simple',
                     *(f'{name}=={version}' for name, version in items)], check=True)
 PY
-env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
-  --no-deps --no-build-isolation -e /workspace/lerobot
 env -u PYTHONPATH /workspace/act_env/bin/python -c \
   'import torch, torchvision, av; print(torch.__version__, torch.__file__); print(torchvision.__version__, torchvision.__file__); print("av", av.__version__)'
 )
 ```
 
 `pip check` 会报告上述 Torch 和 torchvision 版本不符合上游约束；若有其他依赖错误，需要另行处理。
+
+### 2.2 拉取官方源码
+
+拉取固定版本的 LeRobot 官方源码，并以可编辑方式安装。
+
+```bash
+(
+set -Eeuo pipefail
+cd /workspace
+test ! -e lerobot && test ! -L lerobot
+git init lerobot
+git -C lerobot remote add origin https://github.com/huggingface/lerobot.git
+git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1
+git -C lerobot checkout --detach FETCH_HEAD
+env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
+  --no-deps --no-build-isolation -e /workspace/lerobot
+)
+```
+
+### 2.3 拉取并安装 TurboPhysAI
+
+```bash
+(
+set -Eeuo pipefail
+cd /workspace
+test ! -e TurboPhysAI && test ! -L TurboPhysAI
+git clone https://github.com/HYGON-AI/TurboPhysAI.git TurboPhysAI
+git -C TurboPhysAI checkout --detach b2bb3eb9a7c342a88a350e863f0dd7299784ad26
+env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
+  --no-deps --no-build-isolation -e /workspace/TurboPhysAI
+)
+```
+
+TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工具。此前短训通过源码运行 Turbo，此安装方式尚未在本镜像中实测。
 
 ## 3. 下载数据和权重
 
@@ -164,7 +181,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 
 ### 4.2 TurboPhysAI 空配置训练
 
-以下命令复用上面的 `TRAIN_ARGS`，通过源码运行 Turbo CLI，不安装 wheel、不启用优化组或 RuntimeConfig。
+以下命令复用上面的 `TRAIN_ARGS`，使用已安装的 Turbo CLI，不启用优化组或 RuntimeConfig。
 
 ```bash
 test ! -e /workspace/optimization.empty.yaml || { echo '配置已存在，请更换路径' >&2; exit 1; }
@@ -177,10 +194,10 @@ printf '%s\n' \
   'optimization_modules: []' \
   'optimization_groups: []' > /workspace/optimization.empty.yaml
 
-env PYTHONPATH=/workspace/TurboPhysAI /workspace/act_env/bin/python \
+env -u PYTHONPATH /workspace/act_env/bin/python \
   -m turbo_physai.cli optimization check /workspace/optimization.empty.yaml --repo /workspace/lerobot
 test ! -e /workspace/act_runs/turbo_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
-env PYTHONPATH=/workspace/TurboPhysAI HIP_VISIBLE_DEVICES=0 \
+env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   /workspace/act_env/bin/python -m turbo_physai.cli run \
   --optimization-config /workspace/optimization.empty.yaml --disable-numa --log-report -- \
