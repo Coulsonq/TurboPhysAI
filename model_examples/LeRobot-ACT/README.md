@@ -161,6 +161,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
       --dataset.video_backend=pyav \
       --batch_size="${BATCH_SIZE}" \
       --num_workers=4 \
+      --prefetch_factor=1 \
       --steps=10000 \
       --log_freq=10 \
       --wandb.enable=false \
