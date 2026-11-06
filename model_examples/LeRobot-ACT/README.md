@@ -135,30 +135,17 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 
 ### 4.2 TurboPhysAI 空配置训练
 
-使用空的 OptimizationConfig，不启用优化组。
+使用空的 OptimizationConfig 和 RuntimeConfig，不启用优化组和 NUMA 绑定。
 
 ```bash
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
 set -o pipefail
-test ! -e /workspace/optimization.empty.yaml || { echo '配置已存在，请更换路径' >&2; exit 1; }
-printf '%s\n' \
-  'schema_version: turbophysai/optimization-config/v1' \
-  'kind: OptimizationConfig' \
-  'metadata:' \
-  '  id: model.lerobot_act.baseline' \
-  '  version: "1.0.0"' \
-  'optimization_modules: []' \
-  'optimization_groups: []' > /workspace/optimization.empty.yaml
-
-env -u PYTHONPATH turbo-physai optimization check \
-  /workspace/optimization.empty.yaml --repo /workspace/lerobot
-test ! -e /workspace/act_runs/turbo_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
-    --optimization-config /workspace/optimization.empty.yaml \
-    --disable-numa \
+    --optimization-config /workspace/TurboPhysAI/model_examples/LeRobot-ACT/configs/optimization.yaml \
+    --runtime-config /workspace/TurboPhysAI/model_examples/LeRobot-ACT/configs/runtime.yaml \
     --log-report \
     python -m lerobot.scripts.lerobot_train \
       --policy.type=act \
@@ -175,5 +162,5 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
       --seed=42 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
-  2>&1 | tee /workspace/act_runs/turbo_10step.log
+  2>&1 | tee -a /workspace/act_runs/turbo_10step.log
 ```
