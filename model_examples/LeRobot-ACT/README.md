@@ -104,8 +104,9 @@ env -u PYTHONPATH python -m pip install \
 set -Eeuo pipefail
 cd /workspace
 test ! -e TurboPhysAI && test ! -L TurboPhysAI
-git clone https://github.com/HYGON-AI/TurboPhysAI.git TurboPhysAI
-git -C TurboPhysAI checkout --detach b2bb3eb9a7c342a88a350e863f0dd7299784ad26
+git clone --branch ACT-TurboPhysAI \
+  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI
+git -C TurboPhysAI rev-parse HEAD
 env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
 )
@@ -115,36 +116,59 @@ TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工�
 
 ## 3. 下载数据和权重
 
-使用提供的 COS 数据包，数据集为 `lerobot/aloha_mobile_cabinet`，数据包声明 revision `7a752b39f7e69de7e38aee485a6bab07528a061a`。权重是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
+使用提供的 COS 数据包；数据集为 `lerobot/aloha_mobile_cabinet`，数据包声明 revision `7a752b39f7e69de7e38aee485a6bab07528a061a`。
+
+### 3.1 下载数据集
 
 ```bash
 (
 set -Eeuo pipefail
-for path in /workspace/act_assets /workspace/act_assets/downloads /workspace/act_assets/data /workspace/act_assets/ckpt; do
+for path in /workspace/act_assets /workspace/act_assets/downloads /workspace/act_assets/data; do
   test ! -L "$path"
 done
 test ! -e /workspace/act_assets/data/LeRobot-ACT && test ! -L /workspace/act_assets/data/LeRobot-ACT
-test ! -e /workspace/act_assets/ckpt/LeRobot-ACT && test ! -L /workspace/act_assets/ckpt/LeRobot-ACT
-mkdir -p /workspace/act_assets/{downloads,data,ckpt}
-BASE=https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai
-for kind in data ckpt; do
-  curl --fail --location --retry 3 --continue-at - \
-    -o "/workspace/act_assets/downloads/${kind}-LeRobot-ACT.tar.gz" "$BASE/$kind/LeRobot-ACT.tar.gz"
-done
+mkdir -p /workspace/act_assets/downloads /workspace/act_assets/data
+archive=/workspace/act_assets/downloads/data-LeRobot-ACT.tar.gz
+curl --fail --location --retry 3 --continue-at - \
+  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/data/LeRobot-ACT.tar.gz
 # 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH python - <<'PY'
-import pathlib, tarfile
-for kind in ('data', 'ckpt'):
-    with tarfile.open(f'/workspace/act_assets/downloads/{kind}-LeRobot-ACT.tar.gz') as archive:
-        for member in archive:
-            path = pathlib.PurePosixPath(member.name)
-            if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
-                raise SystemExit(f'不安全的归档成员: {member.name}')
+env -u PYTHONPATH python - "$archive" <<'PY'
+import pathlib, sys, tarfile
+with tarfile.open(sys.argv[1]) as archive:
+    for member in archive:
+        path = pathlib.PurePosixPath(member.name)
+        if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+            raise SystemExit(f'不安全的归档成员: {member.name}')
 PY
-for kind in data ckpt; do
-  tar -xzf "/workspace/act_assets/downloads/${kind}-LeRobot-ACT.tar.gz" \
-    --keep-old-files --no-same-owner -C "/workspace/act_assets/$kind"
+tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/data
+)
+```
+
+### 3.2 下载权重
+
+该权重是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
+
+```bash
+(
+set -Eeuo pipefail
+for path in /workspace/act_assets /workspace/act_assets/downloads /workspace/act_assets/ckpt; do
+  test ! -L "$path"
 done
+test ! -e /workspace/act_assets/ckpt/LeRobot-ACT && test ! -L /workspace/act_assets/ckpt/LeRobot-ACT
+mkdir -p /workspace/act_assets/downloads /workspace/act_assets/ckpt
+archive=/workspace/act_assets/downloads/ckpt-LeRobot-ACT.tar.gz
+curl --fail --location --retry 3 --continue-at - \
+  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/ckpt/LeRobot-ACT.tar.gz
+# 解压前拒绝绝对路径、上级路径、链接和特殊文件。
+env -u PYTHONPATH python - "$archive" <<'PY'
+import pathlib, sys, tarfile
+with tarfile.open(sys.argv[1]) as archive:
+    for member in archive:
+        path = pathlib.PurePosixPath(member.name)
+        if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+            raise SystemExit(f'不安全的归档成员: {member.name}')
+PY
+tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/ckpt
 sha256sum /workspace/act_assets/ckpt/LeRobot-ACT/torch/hub/checkpoints/resnet18-f37072fd.pth
 )
 ```
