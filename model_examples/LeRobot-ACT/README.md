@@ -1,10 +1,10 @@
 # LeRobot ACT 模型应用说明
 
-本文介绍在海光 HCU 上准备 LeRobot ACT 环境，并分别运行原生训练和 TurboPhysAI 空配置训练。当前不启用额外优化，也不修改官方模型源码。
+在海光 HCU 上运行 LeRobot ACT 原生训练和 TurboPhysAI 空配置训练。
 
 ## 1. 环境准备
 
-本次使用 Python 3.12、镜像自带海光 Torch 2.13 和 torchvision 0.28。
+基础镜像包含 Python 3.12、海光 Torch 2.13 和 torchvision 0.28。
 
 以下命令在宿主机执行，容器名可自行修改。
 
@@ -34,15 +34,13 @@ docker run -d \
 docker exec -it lerobot-act-turbophysai-v2 bash
 ```
 
-单机八卡使用独立的容器网络和 IPC；多机训练需根据实际通信配置调整。放宽 `memlock` 的容器启动方式尚未单独验证。
-
 后续命令均在容器内执行。
 
 ## 2. 安装环境及源码
 
 ### 2.1 拉取官方源码
 
-拉取固定版本的 LeRobot 官方源码；安装依赖后再以可编辑方式安装。
+拉取 LeRobot 官方源码。
 
 ```bash
 cd /workspace &&
@@ -54,8 +52,6 @@ git -C lerobot checkout --detach FETCH_HEAD
 ```
 
 ### 2.2 拉取并安装 TurboPhysAI
-
-TurboPhysAI 构建需要 `setuptools` 提供的 `pkg_resources`，因此先安装构建所需的版本；其余训练依赖在下一步安装。
 
 ```bash
 cd /workspace &&
@@ -69,11 +65,9 @@ env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
 ```
 
-TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工具。此前短训通过源码运行 Turbo，此安装方式尚未在本镜像中实测。
-
 ### 2.3 安装环境
 
-从 [requirements.txt](requirements.txt) 安装 ACT 训练依赖到容器的全局 Python 环境，再以可编辑方式安装 LeRobot 源码。安装 LeRobot 时保留 `--no-deps`，避免根据上游依赖要求替换镜像自带的 Torch 和 torchvision。
+安装 [ACT 依赖](requirements.txt) 和 LeRobot 源码；安装 LeRobot 时使用 `--no-deps`。
 
 ```bash
 python -m pip install \
@@ -84,17 +78,11 @@ python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
 ```
 
-直接安装会自动解析依赖；镜像或依赖版本变化时，安装结果可能变化。
-
-`pip check` 会报告上述 Torch 和 torchvision 版本不符合上游约束；若有其他依赖错误，需要另行处理。
-
 ## 3. 下载数据和权重
-
-数据集使用 LeRobot 官方的 `lerobot/aloha_mobile_cabinet`，固定 revision 为 `7a752b39f7e69de7e38aee485a6bab07528a061a`；权重使用 ACT 默认的 torchvision ResNet18 预训练骨干。
 
 ### 3.1 下载数据集
 
-使用 `huggingface_hub` 提供的 `hf` 命令从 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)下载：
+下载 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)：
 
 ```bash
 hf download lerobot/aloha_mobile_cabinet \
@@ -105,7 +93,7 @@ hf download lerobot/aloha_mobile_cabinet \
 
 ### 3.2 下载权重
 
-通过 torchvision 官方接口下载 `ResNet18_Weights.IMAGENET1K_V1` 到训练使用的 Torch 缓存目录。这是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
+下载 ACT 使用的 ResNet18 预训练骨干权重：
 
 ```bash
 TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
@@ -114,7 +102,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 4. 运行训练
 
-本次使用 `pyav` 解码，之前的 H20 测试使用 `torchcodec`，两者不能直接作为严格性能或精度对比。运行前请将 `HIP_VISIBLE_DEVICES` 改为实际空闲卡。
+将 `HIP_VISIBLE_DEVICES` 设置为实际空闲卡。示例使用 `pyav` 解码，单卡 batch size 8，训练 10 step。
 
 ### 4.1 原生训练
 
@@ -140,7 +128,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 
 ### 4.2 TurboPhysAI 空配置训练
 
-以下命令复用上面的 `TRAIN_ARGS`，使用已安装的 Turbo CLI，不启用优化组或 RuntimeConfig。
+先执行 4.1，复用其中的 `TRAIN_ARGS`；以下命令不启用优化组或 RuntimeConfig。
 
 ```bash
 test ! -e /workspace/optimization.empty.yaml || { echo '配置已存在，请更换路径' >&2; exit 1; }
@@ -164,8 +152,4 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   "${TRAIN_ARGS[@]}" --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee /workspace/act_runs/turbo_10step.log
 ```
-
-空配置报告 `applied=0 skipped=0 blocked=0 failed=0`，表示未应用优化；训练结果以日志为准。完整训练、多卡、精度及性能尚未验证。
-
-
 
