@@ -111,62 +111,45 @@ env -u PYTHONPATH python -c \
 
 ## 3. 下载数据和权重
 
-使用提供的 COS 数据包；数据集为 `lerobot/aloha_mobile_cabinet`，数据包声明 revision `7a752b39f7e69de7e38aee485a6bab07528a061a`。
+数据集使用 LeRobot 官方的 `lerobot/aloha_mobile_cabinet`，固定 revision 为 `7a752b39f7e69de7e38aee485a6bab07528a061a`；权重使用 ACT 默认的 torchvision ResNet18 预训练骨干。
 
 ### 3.1 下载数据集
+
+使用 `huggingface_hub` 提供的 `hf` 命令从 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)下载：
 
 ```bash
 (
 test ! -L /workspace/act_assets &&
-test ! -L /workspace/act_assets/downloads &&
 test ! -L /workspace/act_assets/data &&
-test ! -e /workspace/act_assets/data/LeRobot-ACT && test ! -L /workspace/act_assets/data/LeRobot-ACT &&
-mkdir -p /workspace/act_assets/downloads /workspace/act_assets/data &&
-archive=/workspace/act_assets/downloads/data-LeRobot-ACT.tar.gz &&
-curl --fail --location --retry 3 --continue-at - \
-  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/data/LeRobot-ACT.tar.gz &&
-# 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH python - "$archive" <<'PY' &&
-import pathlib, sys, tarfile
-with tarfile.open(sys.argv[1]) as archive:
-    for member in archive:
-        path = pathlib.PurePosixPath(member.name)
-        if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
-            raise SystemExit(f'不安全的归档成员: {member.name}')
-PY
-tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/data
+test ! -e /workspace/act_assets/data/LeRobot-ACT &&
+test ! -L /workspace/act_assets/data/LeRobot-ACT &&
+env -u PYTHONPATH -u HF_ENDPOINT -u HF_HUB_OFFLINE \
+  hf download lerobot/aloha_mobile_cabinet \
+  --repo-type dataset \
+  --revision 7a752b39f7e69de7e38aee485a6bab07528a061a \
+  --local-dir /workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet
 )
 ```
 
 ### 3.2 下载权重
 
-该权重是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
+通过 torchvision 官方接口下载 `ResNet18_Weights.IMAGENET1K_V1` 到训练使用的 Torch 缓存目录。这是 ResNet18 骨干初始化权重，不是完整 ACT checkpoint。
 
 ```bash
 (
 test ! -L /workspace/act_assets &&
-test ! -L /workspace/act_assets/downloads &&
 test ! -L /workspace/act_assets/ckpt &&
-test ! -e /workspace/act_assets/ckpt/LeRobot-ACT && test ! -L /workspace/act_assets/ckpt/LeRobot-ACT &&
-mkdir -p /workspace/act_assets/downloads /workspace/act_assets/ckpt &&
-archive=/workspace/act_assets/downloads/ckpt-LeRobot-ACT.tar.gz &&
-curl --fail --location --retry 3 --continue-at - \
-  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/ckpt/LeRobot-ACT.tar.gz &&
-# 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH python - "$archive" <<'PY' &&
-import pathlib, sys, tarfile
-with tarfile.open(sys.argv[1]) as archive:
-    for member in archive:
-        path = pathlib.PurePosixPath(member.name)
-        if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
-            raise SystemExit(f'不安全的归档成员: {member.name}')
-PY
-tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/ckpt &&
-sha256sum /workspace/act_assets/ckpt/LeRobot-ACT/torch/hub/checkpoints/resnet18-f37072fd.pth
+test ! -e /workspace/act_assets/ckpt/LeRobot-ACT &&
+test ! -L /workspace/act_assets/ckpt/LeRobot-ACT &&
+env -u PYTHONPATH TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
+  python -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(progress=True, check_hash=True)' &&
+printf '%s  %s\n' \
+  'f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec' \
+  '/workspace/act_assets/ckpt/LeRobot-ACT/torch/hub/checkpoints/resnet18-f37072fd.pth' | sha256sum -c -
 )
 ```
 
-本次 ResNet18 权重 SHA-256：`f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec`。
+以上命令要求对应目标目录尚不存在，以免覆盖已有数据。
 
 ## 4. 运行训练
 
@@ -222,4 +205,5 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```
 
 空配置报告 `applied=0 skipped=0 blocked=0 failed=0`，表示未应用优化；训练结果以日志为准。完整训练、多卡、精度及性能尚未验证。
+
 
