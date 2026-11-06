@@ -104,7 +104,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 4. 运行训练
 
-以下示例均为单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`，训练 `steps=10`。可按需修改对应参数。
+以下示例均为单进程单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`，训练 `steps=10`。可按需修改对应参数；多卡训练需使用分布式启动方式。
 
 ### 4.1 原生训练
 
@@ -112,31 +112,35 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
 set -o pipefail
-TRAIN_ARGS=(
-  --policy.type=act --policy.device=cuda --policy.push_to_hub=false
-  --dataset.repo_id=lerobot/aloha_mobile_cabinet
-  --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet
-  --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a
-  --dataset.video_backend=pyav --log_freq=1
-  --seed=42 --wandb.enable=false
-)
 test ! -e /workspace/act_runs/native_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   python -m lerobot.scripts.lerobot_train \
-  "${TRAIN_ARGS[@]}" \
-  --batch_size=8 \
-  --num_workers=4 \
-  --steps=10 \
-  --output_dir=/workspace/act_runs/native_10step \
+    --policy.type=act \
+    --policy.device=cuda \
+    --policy.push_to_hub=false \
+    --dataset.repo_id=lerobot/aloha_mobile_cabinet \
+    --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
+    --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
+    --dataset.video_backend=pyav \
+    --batch_size=8 \
+    --num_workers=4 \
+    --steps=10 \
+    --log_freq=1 \
+    --seed=42 \
+    --wandb.enable=false \
+    --output_dir=/workspace/act_runs/native_10step \
   2>&1 | tee /workspace/act_runs/native_10step.log
 ```
 
 ### 4.2 TurboPhysAI 空配置训练
 
-先执行 4.1，复用其中的 `TRAIN_ARGS`；以下命令不启用优化组或 RuntimeConfig。
+使用空的 OptimizationConfig，不启用优化组。
 
 ```bash
+cd /workspace/lerobot
+mkdir -p /workspace/act_runs
+set -o pipefail
 test ! -e /workspace/optimization.empty.yaml || { echo '配置已存在，请更换路径' >&2; exit 1; }
 printf '%s\n' \
   'schema_version: turbophysai/optimization-config/v1' \
@@ -147,19 +151,29 @@ printf '%s\n' \
   'optimization_modules: []' \
   'optimization_groups: []' > /workspace/optimization.empty.yaml
 
-env -u PYTHONPATH python \
-  -m turbo_physai.cli optimization check /workspace/optimization.empty.yaml --repo /workspace/lerobot
+env -u PYTHONPATH turbo-physai optimization check \
+  /workspace/optimization.empty.yaml --repo /workspace/lerobot
 test ! -e /workspace/act_runs/turbo_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
-  python -m turbo_physai.cli run \
-  --optimization-config /workspace/optimization.empty.yaml --disable-numa --log-report -- \
-  python -m lerobot.scripts.lerobot_train \
-  "${TRAIN_ARGS[@]}" \
-  --batch_size=8 \
-  --num_workers=4 \
-  --steps=10 \
-  --output_dir=/workspace/act_runs/turbo_10step \
+  turbo-physai run \
+    --optimization-config /workspace/optimization.empty.yaml \
+    --disable-numa \
+    --log-report \
+    python -m lerobot.scripts.lerobot_train \
+      --policy.type=act \
+      --policy.device=cuda \
+      --policy.push_to_hub=false \
+      --dataset.repo_id=lerobot/aloha_mobile_cabinet \
+      --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
+      --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
+      --dataset.video_backend=pyav \
+      --batch_size=8 \
+      --num_workers=4 \
+      --steps=10 \
+      --log_freq=1 \
+      --seed=42 \
+      --wandb.enable=false \
+      --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee /workspace/act_runs/turbo_10step.log
 ```
-
