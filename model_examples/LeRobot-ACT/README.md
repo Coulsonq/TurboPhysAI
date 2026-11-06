@@ -104,7 +104,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 4. 运行训练
 
-以下示例均为单进程单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`；原生训练 10 步，Turbo 训练 100 步。可按需修改对应参数；多卡训练需使用分布式启动方式。
+以下示例每卡 `batch_size=8`、`num_workers=4`；原生训练使用单卡运行 10 步，Turbo 训练默认使用 8 卡运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
 
 ### 4.1 原生训练
 
@@ -130,7 +130,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
     --seed=42 \
     --wandb.enable=false \
     --output_dir=/workspace/act_runs/native_10step \
-  2>&1 | tee -a "/workspace/act_runs/native_1hcu_bs${BATCH_SIZE}_${STAMP}.log"
+  2>&1 | tee -a "/workspace/act_runs/native_1gpu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
 
 ### 4.2 TurboPhysAI 训练
@@ -140,15 +140,18 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```bash
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
+GPU_IDS=0,1,2,3,4,5,6,7
+GPU_COUNT="$(awk -F, '{print NF}' <<< "${GPU_IDS}")"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 BATCH_SIZE=8
-env -u PYTHONPATH HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
-    --optimization-config /workspace/TurboPhysAI/model_examples/LeRobot-ACT/configs/optimization.yaml \
-    --runtime-config /workspace/TurboPhysAI/model_examples/LeRobot-ACT/configs/runtime.yaml \
+    --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/optimization.yaml \
+    --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/runtime.yaml \
     --log-report \
-    python -m lerobot.scripts.lerobot_train \
+    torchrun --standalone --nnodes=1 --nproc_per_node="${GPU_COUNT}" \
+      -m lerobot.scripts.lerobot_train \
       --policy.type=act \
       --policy.device=cuda \
       --policy.push_to_hub=false \
@@ -162,5 +165,5 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
       --log_freq=1 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
-  2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_bs${BATCH_SIZE}_${STAMP}.log"
+  2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
