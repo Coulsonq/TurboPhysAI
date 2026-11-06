@@ -19,29 +19,24 @@ docker pull harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-
 ### 1.2 创建并进入容器
 
 ```bash
-docker run -dit \
-  --restart unless-stopped \
-  --network=host \
+docker run -d \
   --name=lerobot-act-turbophysai-v2 \
-  --privileged \
   --device=/dev/kfd \
   --device=/dev/dri \
-  --ipc=host \
-  --shm-size=128G \
   --group-add video \
-  --cap-add=SYS_PTRACE \
-  --security-opt seccomp=unconfined \
-  -u root \
-  --ulimit stack=-1:-1 \
+  --cap-drop=ALL \
+  --security-opt no-new-privileges \
+  --shm-size=64G \
   --ulimit memlock=-1:-1 \
   -v /opt/hyhal:/opt/hyhal:ro \
   -w /workspace \
+  --entrypoint /bin/bash \
   harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal \
-  bash -lc 'exec tail -f /dev/null' &&
+  -c 'sleep infinity' &&
 docker exec -it lerobot-act-turbophysai-v2 bash
 ```
 
-该配置使用特权容器及宿主机网络、IPC，请仅在可信环境中使用。使用 `--ipc=host` 时共享宿主机 IPC，`--shm-size` 不会为容器单独设置共享内存大小。
+单机八卡使用独立的容器网络和 IPC；多机训练需根据实际通信配置调整。放宽 `memlock` 的容器启动方式尚未单独验证。
 
 后续命令均在容器内执行。
 
