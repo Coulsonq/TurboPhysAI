@@ -67,7 +67,7 @@ env -u PYTHONPATH python -m pip install \
 
 ### 2.3 安装环境
 
-安装 [ACT 依赖](requirements.txt) 和 LeRobot 源码；安装 LeRobot 时使用 `--no-deps`。
+安装 [requirements.txt](requirements.txt) 和 LeRobot 源码；安装 LeRobot 时使用 `--no-deps`。
 
 ```bash
 python -m pip install \
