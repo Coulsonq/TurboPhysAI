@@ -2,7 +2,7 @@
 
 本文介绍在海光 HCU 上准备 LeRobot ACT 环境，并分别运行原生训练和 TurboPhysAI 空配置训练。当前不启用额外优化，也不修改官方模型源码。
 
-已在 BW1100 上以单卡、batch size 8、seed 42 分别完成 10 step 短训；卡与其他任务共享，结果不能作为性能或精度结论。以下步骤根据实际操作整理，尚未在全新容器中逐条复跑。
+此前使用虚拟环境在 BW1100 上以单卡、batch size 8、seed 42 分别完成 10 step 短训；卡与其他任务共享，结果不能作为性能或精度结论。以下改为容器全局安装的步骤尚未从零实测。
 
 ## 1. 环境准备
 
@@ -44,15 +44,13 @@ docker exec -it lerobot-act-turbophysai-v2 bash
 
 ### 2.1 安装环境
 
-创建独立环境并保留镜像自带的 Torch。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换厂商版本；清除继承的 `PYTHONPATH` 以保证虚拟环境生效。
+直接安装到容器的全局 Python 环境。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换镜像自带的厂商版本；其余已有依赖可能因版本要求被替换。清除继承的 `PYTHONPATH`，保证使用容器内的默认 Python 包路径。
 
 ```bash
 (
 set -Eeuo pipefail
-test ! -e /workspace/act_env && test ! -L /workspace/act_env
 test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.json
-env -u PYTHONPATH python -m venv --system-site-packages /workspace/act_env
-env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
+env -u PYTHONPATH python -m pip install \
   --dry-run --report /workspace/act-deps-plan.json \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   'numpy>=2,<2.3' 'opencv-python-headless>=4.9,<4.14' 'Pillow>=10,<13' \
@@ -63,7 +61,7 @@ env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
   'jsonlines>=4,<5' 'wandb>=0.24,<0.28' 'accelerate>=1.14,<2' \
   'PyYAML>=6.0' 'setuptools>=71,<81' scipy
 
-env -u PYTHONPATH /workspace/act_env/bin/python - <<'PY'
+env -u PYTHONPATH python - <<'PY'
 import json, subprocess, sys
 with open('/workspace/act-deps-plan.json', encoding='utf-8') as f:
     items = [(x['metadata']['name'], x['metadata']['version']) for x in json.load(f)['install']]
@@ -74,7 +72,7 @@ if items:
                     'https://pypi.tuna.tsinghua.edu.cn/simple',
                     *(f'{name}=={version}' for name, version in items)], check=True)
 PY
-env -u PYTHONPATH /workspace/act_env/bin/python -c \
+env -u PYTHONPATH python -c \
   'import torch, torchvision, av; print(torch.__version__, torch.__file__); print(torchvision.__version__, torchvision.__file__); print("av", av.__version__)'
 )
 ```
@@ -94,7 +92,7 @@ git init lerobot
 git -C lerobot remote add origin https://github.com/huggingface/lerobot.git
 git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1
 git -C lerobot checkout --detach FETCH_HEAD
-env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
+env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
 )
 ```
@@ -108,7 +106,7 @@ cd /workspace
 test ! -e TurboPhysAI && test ! -L TurboPhysAI
 git clone https://github.com/HYGON-AI/TurboPhysAI.git TurboPhysAI
 git -C TurboPhysAI checkout --detach b2bb3eb9a7c342a88a350e863f0dd7299784ad26
-env -u PYTHONPATH /workspace/act_env/bin/python -m pip install \
+env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
 )
 ```
@@ -134,7 +132,7 @@ for kind in data ckpt; do
     -o "/workspace/act_assets/downloads/${kind}-LeRobot-ACT.tar.gz" "$BASE/$kind/LeRobot-ACT.tar.gz"
 done
 # 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH /workspace/act_env/bin/python - <<'PY'
+env -u PYTHONPATH python - <<'PY'
 import pathlib, tarfile
 for kind in ('data', 'ckpt'):
     with tarfile.open(f'/workspace/act_assets/downloads/{kind}-LeRobot-ACT.tar.gz') as archive:
@@ -174,7 +172,7 @@ TRAIN_ARGS=(
 test ! -e /workspace/act_runs/native_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
-  /workspace/act_env/bin/python -m lerobot.scripts.lerobot_train \
+  python -m lerobot.scripts.lerobot_train \
   "${TRAIN_ARGS[@]}" --output_dir=/workspace/act_runs/native_10step \
   2>&1 | tee /workspace/act_runs/native_10step.log
 ```
@@ -194,14 +192,14 @@ printf '%s\n' \
   'optimization_modules: []' \
   'optimization_groups: []' > /workspace/optimization.empty.yaml
 
-env -u PYTHONPATH /workspace/act_env/bin/python \
+env -u PYTHONPATH python \
   -m turbo_physai.cli optimization check /workspace/optimization.empty.yaml --repo /workspace/lerobot
 test ! -e /workspace/act_runs/turbo_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
-  /workspace/act_env/bin/python -m turbo_physai.cli run \
+  python -m turbo_physai.cli run \
   --optimization-config /workspace/optimization.empty.yaml --disable-numa --log-report -- \
-  /workspace/act_env/bin/python -m lerobot.scripts.lerobot_train \
+  python -m lerobot.scripts.lerobot_train \
   "${TRAIN_ARGS[@]}" --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee /workspace/act_runs/turbo_10step.log
 ```
