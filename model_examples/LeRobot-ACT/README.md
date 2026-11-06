@@ -104,15 +104,15 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 4. 运行训练
 
-以下示例均为单进程单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`，训练 `steps=10`。可按需修改对应参数；多卡训练需使用分布式启动方式。
+以下示例均为单进程单卡：`HIP_VISIBLE_DEVICES=0`、每卡 `batch_size=8`、`num_workers=4`；原生训练 10 步，Turbo 训练 100 步。可按需修改对应参数；多卡训练需使用分布式启动方式。
 
 ### 4.1 原生训练
 
 ```bash
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
-set -o pipefail
-test ! -e /workspace/act_runs/native_10step.log || { echo '日志已存在，请更换路径' >&2; exit 1; }
+BATCH_SIZE=8
+STAMP="$(date +%Y%m%d_%H%M%S)"
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   python -m lerobot.scripts.lerobot_train \
@@ -123,14 +123,14 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
     --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
     --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
     --dataset.video_backend=pyav \
-    --batch_size=8 \
+    --batch_size="${BATCH_SIZE}" \
     --num_workers=4 \
     --steps=10 \
     --log_freq=1 \
     --seed=42 \
     --wandb.enable=false \
     --output_dir=/workspace/act_runs/native_10step \
-  2>&1 | tee /workspace/act_runs/native_10step.log
+  2>&1 | tee -a "/workspace/act_runs/native_1hcu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
 
 ### 4.2 TurboPhysAI 训练
@@ -140,7 +140,8 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 ```bash
 cd /workspace/lerobot
 mkdir -p /workspace/act_runs
-set -o pipefail
+BATCH_SIZE=8
+STAMP="$(date +%Y%m%d_%H%M%S)"
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
@@ -155,11 +156,11 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
       --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
       --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
       --dataset.video_backend=pyav \
-      --batch_size=8 \
+      --batch_size="${BATCH_SIZE}" \
       --num_workers=4 \
       --steps=100 \
       --log_freq=1 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
-  2>&1 | tee -a /workspace/act_runs/turbo_100step.log
+  2>&1 | tee -a "/workspace/act_runs/turbo_1hcu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
