@@ -48,8 +48,7 @@ docker exec -it lerobot-act-turbophysai-v2 bash
 
 ```bash
 (
-set -Eeuo pipefail
-test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.json
+test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.json || exit 1
 env -u PYTHONPATH python -m pip install \
   --dry-run --report /workspace/act-deps-plan.json \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
@@ -59,9 +58,9 @@ env -u PYTHONPATH python -m pip install \
   'packaging>=24.2,<26' 'termcolor>=2.4,<4' 'tqdm>=4.66,<5' \
   'datasets>=4.7,<5' 'pandas>=2,<3' 'pyarrow>=21,<30' 'av>=15,<16' \
   'jsonlines>=4,<5' 'wandb>=0.24,<0.28' 'accelerate>=1.14,<2' \
-  'PyYAML>=6.0' 'setuptools>=71,<81' scipy
+  'PyYAML>=6.0' 'setuptools>=71,<81' scipy || exit 1
 
-env -u PYTHONPATH python - <<'PY'
+env -u PYTHONPATH python - <<'PY' || exit 1
 import json, subprocess, sys
 with open('/workspace/act-deps-plan.json', encoding='utf-8') as f:
     items = [(x['metadata']['name'], x['metadata']['version']) for x in json.load(f)['install']]
@@ -85,13 +84,12 @@ env -u PYTHONPATH python -c \
 
 ```bash
 (
-set -Eeuo pipefail
-cd /workspace
-test ! -e lerobot && test ! -L lerobot
-git init lerobot
-git -C lerobot remote add origin https://github.com/huggingface/lerobot.git
-git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1
-git -C lerobot checkout --detach FETCH_HEAD
+cd /workspace || exit 1
+test ! -e lerobot && test ! -L lerobot || exit 1
+git init lerobot || exit 1
+git -C lerobot remote add origin https://github.com/huggingface/lerobot.git || exit 1
+git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 || exit 1
+git -C lerobot checkout --detach FETCH_HEAD || exit 1
 env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
 )
@@ -101,12 +99,11 @@ env -u PYTHONPATH python -m pip install \
 
 ```bash
 (
-set -Eeuo pipefail
-cd /workspace
-test ! -e TurboPhysAI && test ! -L TurboPhysAI
+cd /workspace || exit 1
+test ! -e TurboPhysAI && test ! -L TurboPhysAI || exit 1
 git clone --branch ACT-TurboPhysAI \
-  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI
-git -C TurboPhysAI rev-parse HEAD
+  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI || exit 1
+git -C TurboPhysAI rev-parse HEAD || exit 1
 env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
 )
@@ -122,17 +119,16 @@ TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工�
 
 ```bash
 (
-set -Eeuo pipefail
 for path in /workspace/act_assets /workspace/act_assets/downloads /workspace/act_assets/data; do
-  test ! -L "$path"
+  test ! -L "$path" || exit 1
 done
-test ! -e /workspace/act_assets/data/LeRobot-ACT && test ! -L /workspace/act_assets/data/LeRobot-ACT
-mkdir -p /workspace/act_assets/downloads /workspace/act_assets/data
+test ! -e /workspace/act_assets/data/LeRobot-ACT && test ! -L /workspace/act_assets/data/LeRobot-ACT || exit 1
+mkdir -p /workspace/act_assets/downloads /workspace/act_assets/data || exit 1
 archive=/workspace/act_assets/downloads/data-LeRobot-ACT.tar.gz
 curl --fail --location --retry 3 --continue-at - \
-  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/data/LeRobot-ACT.tar.gz
+  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/data/LeRobot-ACT.tar.gz || exit 1
 # 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH python - "$archive" <<'PY'
+env -u PYTHONPATH python - "$archive" <<'PY' || exit 1
 import pathlib, sys, tarfile
 with tarfile.open(sys.argv[1]) as archive:
     for member in archive:
@@ -150,17 +146,16 @@ tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/da
 
 ```bash
 (
-set -Eeuo pipefail
 for path in /workspace/act_assets /workspace/act_assets/downloads /workspace/act_assets/ckpt; do
-  test ! -L "$path"
+  test ! -L "$path" || exit 1
 done
-test ! -e /workspace/act_assets/ckpt/LeRobot-ACT && test ! -L /workspace/act_assets/ckpt/LeRobot-ACT
-mkdir -p /workspace/act_assets/downloads /workspace/act_assets/ckpt
+test ! -e /workspace/act_assets/ckpt/LeRobot-ACT && test ! -L /workspace/act_assets/ckpt/LeRobot-ACT || exit 1
+mkdir -p /workspace/act_assets/downloads /workspace/act_assets/ckpt || exit 1
 archive=/workspace/act_assets/downloads/ckpt-LeRobot-ACT.tar.gz
 curl --fail --location --retry 3 --continue-at - \
-  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/ckpt/LeRobot-ACT.tar.gz
+  -o "$archive" https://hygon-thpcbench-1251001002.cos.ap-shanghai.myqcloud.com/hygon/embodiedai/ckpt/LeRobot-ACT.tar.gz || exit 1
 # 解压前拒绝绝对路径、上级路径、链接和特殊文件。
-env -u PYTHONPATH python - "$archive" <<'PY'
+env -u PYTHONPATH python - "$archive" <<'PY' || exit 1
 import pathlib, sys, tarfile
 with tarfile.open(sys.argv[1]) as archive:
     for member in archive:
@@ -168,7 +163,7 @@ with tarfile.open(sys.argv[1]) as archive:
         if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
             raise SystemExit(f'不安全的归档成员: {member.name}')
 PY
-tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/ckpt
+tar -xzf "$archive" --keep-old-files --no-same-owner -C /workspace/act_assets/ckpt || exit 1
 sha256sum /workspace/act_assets/ckpt/LeRobot-ACT/torch/hub/checkpoints/resnet18-f37072fd.pth
 )
 ```
