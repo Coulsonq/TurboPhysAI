@@ -75,31 +75,18 @@ TurboPhysAI 安装会构建原生扩展，需要镜像内具备相应编译工�
 
 ### 2.3 安装环境
 
-从 [requirements.txt](requirements.txt) 安装 ACT 训练依赖到容器的全局 Python 环境。安装前生成依赖计划，若包含 `torch`、`torchvision` 或 `torchcodec` 则停止，避免替换镜像自带的厂商版本；其余已有依赖可能因版本要求被替换。清除继承的 `PYTHONPATH`，保证使用容器内的默认 Python 包路径。
+从 [requirements.txt](requirements.txt) 安装 ACT 训练依赖到容器的全局 Python 环境，再以可编辑方式安装 LeRobot 源码。安装 LeRobot 时保留 `--no-deps`，避免根据上游依赖要求替换镜像自带的 Torch 和 torchvision。
 
 ```bash
-test ! -e /workspace/act-deps-plan.json && test ! -L /workspace/act-deps-plan.json &&
-env -u PYTHONPATH python -m pip install \
-  --dry-run --report /workspace/act-deps-plan.json \
-  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  -r /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt &&
+python -m pip install \
+  -i https://pypi.tuna.tsinghua.edu.cn/simple \
+  -r /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt
 
-env -u PYTHONPATH python - <<'PY' &&
-import json, subprocess, sys
-with open('/workspace/act-deps-plan.json', encoding='utf-8') as f:
-    items = [(x['metadata']['name'], x['metadata']['version']) for x in json.load(f)['install']]
-if any(name.lower().replace('_', '-') in {'torch', 'torchvision', 'torchcodec'} for name, _ in items):
-    raise SystemExit('依赖计划包含 Torch 栈，请检查后重新配置。')
-if items:
-    subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-deps', '--index-url',
-                    'https://pypi.tuna.tsinghua.edu.cn/simple',
-                    *(f'{name}=={version}' for name, version in items)], check=True)
-PY
-env -u PYTHONPATH python -m pip install \
-  --no-deps --no-build-isolation -e /workspace/lerobot &&
-env -u PYTHONPATH python -c \
-  'import torch, torchvision, av; print(torch.__version__, torch.__file__); print(torchvision.__version__, torchvision.__file__); print("av", av.__version__)'
+python -m pip install \
+  --no-deps --no-build-isolation -e /workspace/lerobot
 ```
+
+直接安装会自动解析依赖；镜像或依赖版本变化时，安装结果可能变化。
 
 `pip check` 会报告上述 Torch 和 torchvision 版本不符合上游约束；若有其他依赖错误，需要另行处理。
 
