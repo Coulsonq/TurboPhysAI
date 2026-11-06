@@ -133,7 +133,7 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   2>&1 | tee /workspace/act_runs/native_10step.log
 ```
 
-### 4.2 TurboPhysAI 空配置训练
+### 4.2 TurboPhysAI 训练
 
 使用空的 OptimizationConfig 和 RuntimeConfig，不启用优化组和 NUMA 绑定。
 
