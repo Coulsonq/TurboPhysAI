@@ -143,7 +143,7 @@ mkdir -p /workspace/act_runs
 GPU_IDS=0,1,2,3,4,5,6,7
 GPU_COUNT="$(awk -F, '{print NF}' <<< "${GPU_IDS}")"
 STAMP="$(date +%Y%m%d_%H%M%S)"
-BATCH_SIZE=8
+BATCH_SIZE=86
 env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
@@ -161,8 +161,8 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
       --dataset.video_backend=pyav \
       --batch_size="${BATCH_SIZE}" \
       --num_workers=4 \
-      --steps=100 \
-      --log_freq=1 \
+      --steps=10000 \
+      --log_freq=10 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}.log"
