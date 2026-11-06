@@ -82,10 +82,11 @@ python -m pip install \
 
 ### 3.1 下载数据集
 
-通过 HF 镜像下载 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)：
+设置 HF 镜像地址并下载 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)：
 
 ```bash
 HF_ENDPOINT=https://hf-mirror.com \
+HF_HUB_DISABLE_XET=1 \
   hf download lerobot/aloha_mobile_cabinet \
   --repo-type dataset \
   --revision 7a752b39f7e69de7e38aee485a6bab07528a061a \
