@@ -8,21 +8,40 @@
 
 本次使用 Python 3.12、镜像自带海光 Torch 2.13 和 torchvision 0.28。LeRobot 固定版本要求 Torch < 2.12、torchvision < 0.27，因此本次属于兼容性短训，不完全符合上游依赖要求。
 
-在宿主机创建容器，容器名可自行修改：
+以下命令在宿主机执行，容器名可自行修改。
+
+### 1.1 拉取基础镜像
 
 ```bash
-(
-set -Eeuo pipefail
-IMAGE=harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal
-docker pull "$IMAGE"
-docker run -d --name lerobot-act-turbophysai-v2 \
-  --device /dev/kfd --device /dev/dri --group-add video \
-  --cap-drop=ALL --security-opt no-new-privileges --shm-size 64g \
-  -v /opt/hyhal:/opt/hyhal:ro -w /workspace --entrypoint /bin/bash \
-  "$IMAGE" -c 'sleep infinity'
-docker exec -it lerobot-act-turbophysai-v2 bash
-)
+docker pull harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal
 ```
+
+### 1.2 创建并进入容器
+
+```bash
+docker run -dit \
+  --restart unless-stopped \
+  --network=host \
+  --name=lerobot-act-turbophysai-v2 \
+  --privileged \
+  --device=/dev/kfd \
+  --device=/dev/dri \
+  --ipc=host \
+  --shm-size=128G \
+  --group-add video \
+  --cap-add=SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+  -u root \
+  --ulimit stack=-1:-1 \
+  --ulimit memlock=-1:-1 \
+  -v /opt/hyhal:/opt/hyhal:ro \
+  -w /workspace \
+  harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal \
+  bash -lc 'exec tail -f /dev/null' &&
+docker exec -it lerobot-act-turbophysai-v2 bash
+```
+
+该配置使用特权容器及宿主机网络、IPC，请仅在可信环境中使用。使用 `--ipc=host` 时共享宿主机 IPC，`--shm-size` 不会为容器单独设置共享内存大小。
 
 后续命令均在容器内执行。
 
