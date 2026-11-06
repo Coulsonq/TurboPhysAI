@@ -157,9 +157,8 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
       --dataset.video_backend=pyav \
       --batch_size=8 \
       --num_workers=4 \
-      --steps=10 \
+      --steps=100 \
       --log_freq=1 \
-      --seed=42 \
       --wandb.enable=false \
       --output_dir=/workspace/act_runs/turbo_10step \
   2>&1 | tee -a /workspace/act_runs/turbo_10step.log
