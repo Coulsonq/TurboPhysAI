@@ -1,7 +1,110 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
 schema_version: turbophysai/optimization-config/v1
 kind: OptimizationConfig
 metadata:
-  id: model.lerobot_act.baseline
-  version: "1.0.0"
-optimization_modules: []
-optimization_groups: []
+  id: model.lerobot_act.hcu
+  version: 1.0.0
+  description: LeRobot ACT HCU performance configuration
+model:
+  name: LeRobot-ACT
+compatibility:
+  commits:
+  - 3f2179f3b69708b6ad009b2e7685dd9d05269ee1
+optimization_groups:
+- id: lerobot_act.ddp_find_unused
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      torch.nn.parallel.distributed.DistributedDataParallel.__init__:
+      - source-v1:da510ad4ecdf98ae3028f0fd855dd99d96acfb0d53ebf37b80a90837b53a3825
+    ast_hashes:
+      torch.nn.parallel.distributed.DistributedDataParallel.__init__:
+      - ast-v1:0904aa9377bcb83e978bf07f6e4814a63b9099b0842bb382437c569a334dffad
+- id: lerobot_act.channels_last_backbone_compile
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACT.__init__:
+      - source-v1:a772409d620b7a2241b7b64c5de79806c9c8a44714e71124683e0e2890637139
+      torchvision.models._utils.IntermediateLayerGetter.forward:
+      - source-v1:e3037cc6c43f2cee8787f2ea0cefefb5bd9edfb14c5a8c5935bbe89d28b39e19
+      lerobot.optim.optimizers._save_single_optimizer_state:
+      - source-v1:b32fdfea4befaa908ec03d25af31c718ff4d566bafeed7056d4ff5a6cf943998
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACT.__init__:
+      - ast-v1:6b3ada02a05c81b50542f7d9a8ef0b133ddcf75666d47e121cd38457c7f443a7
+      torchvision.models._utils.IntermediateLayerGetter.forward:
+      - ast-v1:fceb4ce012c9a0cd639fc2df70c133da6958b626c03ef375a0a2a37b810412c2
+      lerobot.optim.optimizers._save_single_optimizer_state:
+      - ast-v1:8d3118933c31c3a7adde2ee3d9607d1cd2a6136360ee5318313e33cd2483820c
+- id: lerobot_act.sampler_vector
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.datasets.sampler.EpisodeAwareSampler._iter_epoch:
+      - source-v1:5d7d0ef2cf0144b9795983eceb8425261bc41e2652f18a75e2973fcb89b073a0
+    ast_hashes:
+      lerobot.datasets.sampler.EpisodeAwareSampler._iter_epoch:
+      - ast-v1:351b199497a7e82f6020dbc49fe4d3a9b6efe394f889e4629cf909a831ce5cc2
+- id: lerobot_act.ffn_backward_fusion
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoderLayer.forward:
+      - source-v1:5e325b3d64429d1001e0369895e10a32a9e1454cf021effebfb3af1db6a10706
+      lerobot.policies.act.modeling_act.ACTDecoderLayer.forward:
+      - source-v1:9ac32a4176e726f476d7056fc88ca1ce8430ab005d331daac7c07fa563ce0689
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoderLayer.forward:
+      - ast-v1:1a60ef31000f5cb1ccde1dfd07dbacdc0402b1e5489b0fc3f8cc74261887d1a2
+      lerobot.policies.act.modeling_act.ACTDecoderLayer.forward:
+      - ast-v1:44a820963be953c0c81552e5f85219e622c4c71d37a9beb2b76056ea4ef65bc4
+- id: lerobot_act.attention_compile
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoder.__init__:
+      - source-v1:d6873896e7e645f78b777de9fc63294e78bbdef8651662e213b6b10f4c190c51
+      torch.nn.modules.activation.MultiheadAttention.forward:
+      - source-v1:574c6b13f8e66a4a24cf179e6cdd3052432084064d0a04705ec3fc00b0c395ef
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoder.__init__:
+      - ast-v1:663e4b63a72c7d3c0747c4966877a2b834aa0894a7746fcf1f90ed67fe68dcd8
+      torch.nn.modules.activation.MultiheadAttention.forward:
+      - ast-v1:bf44fe72124624f5e56901f0446e3f3d9070a54b8a861b052bd792e56de951de
+- id: lerobot_act.pool_backward_gather
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACT.forward:
+      - source-v1:b07a945bf46ca50ad36bc2873f88ea42f6a8bcad03e29cb6da75976f12a249a2
+      torch.nn.modules.pooling.MaxPool2d.forward:
+      - source-v1:6b69796b4e7a9098e819b66f3ee2463625967e411631ec3bc50e01febcd26b83
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACT.forward:
+      - ast-v1:1e4f55bbb7809acd9fcabd7efe953da14301b0a63251b829b8376713315236d8
+      torch.nn.modules.pooling.MaxPool2d.forward:
+      - ast-v1:0bb67557c45f13d9f7cb1631cb467d459af3be101453304f280909950d1c0682
+- id: lerobot_act.layernorm_apex_backward
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACTPolicy.forward:
+      - source-v1:651b631d86f650e77de94d9263e49e7f6dc61a594479b1e2692e55b84f552d4d
+      torch.nn.modules.normalization.LayerNorm.forward:
+      - source-v1:fa5d78b85670946f4b23c5e789af14ae0cedfd0ce0ebc9b99529a2c928b1ec69
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACTPolicy.forward:
+      - ast-v1:6082527eec9a5ed46ede7d3e8ae90a869a1ace8f43e1051c5e2826edf8637a1f
+      torch.nn.modules.normalization.LayerNorm.forward:
+      - ast-v1:46d7794087369ccf8d2a6db2fe49508998e29fda386234a2b38defd2b3db01f3
+optimization_modules:
+- turbo_physai.optimizations.models.lerobot_act.catalog
