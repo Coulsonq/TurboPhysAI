@@ -1,6 +1,6 @@
 # LeRobot ACT 模型应用说明
 
-在海光 HCU 上运行 LeRobot ACT 原生训练和 TurboPhysAI 空配置训练。
+在海光 HCU 上运行 LeRobot ACT 原生训练和 TurboPhysAI 配置训练。
 
 ## 1. 环境准备
 
@@ -83,8 +83,6 @@ apt-get install -y --no-install-recommends libavdevice58
 python -m pip install --no-deps \
   --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
-
-TorchCodec 0.12 超出当前 LeRobot 声明的 `<0.12` 范围，目前已完成解码验证，完整训练和精度仍需验证。
 
 ## 3. 下载数据和权重
 
