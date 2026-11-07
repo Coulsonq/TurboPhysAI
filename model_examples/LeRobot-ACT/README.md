@@ -23,6 +23,7 @@ docker run -d \
   --device=/dev/dri \
   --group-add video \
   --cap-drop=ALL \
+  --cap-add=SYS_NICE \
   --security-opt no-new-privileges \
   --shm-size=64G \
   --ulimit memlock=-1:-1 \
