@@ -95,10 +95,12 @@ TorchCodec 0.12 超出当前 LeRobot 声明的 `<0.12` 范围，目前已完成�
 ```bash
 HF_ENDPOINT=https://hf-mirror.com \
 HF_HUB_DISABLE_XET=1 \
-  hf download lerobot/aloha_mobile_cabinet \
-  --repo-type dataset \
-  --revision 7a752b39f7e69de7e38aee485a6bab07528a061a \
-  --local-dir /workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet
+python -c 'from huggingface_hub import snapshot_download; snapshot_download(
+    repo_id="lerobot/aloha_mobile_cabinet",
+    repo_type="dataset",
+    revision="7a752b39f7e69de7e38aee485a6bab07528a061a",
+    local_dir="/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet"
+)'
 ```
 
 ### 3.2 下载权重
