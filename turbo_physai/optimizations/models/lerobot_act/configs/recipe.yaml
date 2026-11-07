@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+schema_version: turbophysai/optimization-config/v1
+kind: OptimizationConfig
+metadata:
+  id: model.lerobot_act.hcu
+  version: "1.0.0"
+  description: LeRobot ACT HCU performance configuration
+model:
+  name: LeRobot-ACT
+optimization_modules:
+  - turbo_physai.optimizations.models.lerobot_act.catalog
+optimization_groups:
+  - id: lerobot_act.ddp_find_unused
+    enabled: true
+  - id: lerobot_act.channels_last_backbone_compile
+    enabled: true
+  - id: lerobot_act.sampler_vector
+    enabled: true
+  - id: lerobot_act.ffn_backward_fusion
+    enabled: true
+  - id: lerobot_act.attention_compile
+    enabled: true
+  - id: lerobot_act.pool_backward_gather
+    enabled: true
+  - id: lerobot_act.layernorm_apex_backward
+    enabled: true
