@@ -78,8 +78,19 @@ python -m pip install \
 python -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
 
-apt-get update
-apt-get install -y --no-install-recommends libavdevice58
+mkdir /workspace/act_ffmpeg4 &&
+cd /workspace/act_ffmpeg4 &&
+curl -fsSLO https://archive.ubuntu.com/ubuntu/pool/universe/f/ffmpeg/libavdevice58_4.4.2-0ubuntu0.22.04.1_amd64.deb &&
+curl -fsSLO https://archive.ubuntu.com/ubuntu/pool/main/libc/libcdio-paranoia/libcdio-paranoia2_10.2+2.0.0-1build3_amd64.deb &&
+curl -fsSLO https://archive.ubuntu.com/ubuntu/pool/main/libc/libcdio-paranoia/libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb &&
+printf '%s\n' \
+  'b44a8a7c9e6e96bbb4f3a617c6a421bb42aefe1df6041c4a35f9f0b6b75f2399  libavdevice58_4.4.2-0ubuntu0.22.04.1_amd64.deb' \
+  '6ebe35ba93f5fe2145133b9d56a54f2666ea5e15ce4fe475b6555d20412e6515  libcdio-paranoia2_10.2+2.0.0-1build3_amd64.deb' \
+  'fe997e00ff8bce19be8b9ce40a9c0dd7edcbaaec15863d42026f25a9772881ff  libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb' |
+  sha256sum -c - &&
+dpkg-deb -x libavdevice58_4.4.2-0ubuntu0.22.04.1_amd64.deb rootfs &&
+dpkg-deb -x libcdio-paranoia2_10.2+2.0.0-1build3_amd64.deb rootfs &&
+dpkg-deb -x libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb rootfs
 python -m pip install --no-deps \
   --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
@@ -122,6 +133,7 @@ mkdir -p /workspace/act_runs
 BATCH_SIZE=8
 STAMP="$(date +%Y%m%d_%H%M%S)"
 env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
+  LD_LIBRARY_PATH="/workspace/act_ffmpeg4/rootfs/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   python -m lerobot.scripts.lerobot_train \
     --policy.type=act \
@@ -153,6 +165,7 @@ GPU_COUNT="$(awk -F, '{print NF}' <<< "${GPU_IDS}")"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 BATCH_SIZE=86
 env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
+  LD_LIBRARY_PATH="/workspace/act_ffmpeg4/rootfs/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
     --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/optimization.yaml \
