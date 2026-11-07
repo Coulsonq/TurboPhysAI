@@ -151,7 +151,7 @@ mkdir -p /workspace/act_runs
 GPU_IDS=0,1,2,3,4,5,6,7
 GPU_COUNT="$(awk -F, '{print NF}' <<< "${GPU_IDS}")"
 STAMP="$(date +%Y%m%d_%H%M%S)"
-BATCH_SIZE=8
+BATCH_SIZE=86
 env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
