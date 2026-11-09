@@ -1,17 +1,7 @@
 schema_version: turbophysai/runtime-config/v1
 kind: RuntimeConfig
 process:
-  numa: false
-  # nmz104 v3, eight HCUs in order 0-7; CPU affinity only.
-  rank_affinity:
-    "0": "0-95,192-287"
-    "1": "0-95,192-287"
-    "2": "0-95,192-287"
-    "3": "0-95,192-287"
-    "4": "96-191,288-383"
-    "5": "96-191,288-383"
-    "6": "96-191,288-383"
-    "7": "96-191,288-383"
+  numa: true
 
 environment:
   set:

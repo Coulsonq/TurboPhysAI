@@ -60,7 +60,10 @@ def _is_eligible(module, value):
         or not isinstance(value, torch.Tensor)
         or value.device.type != "cuda"
         or value.dtype != torch.float32
-        or tuple(value.shape) != (902, 8, 512)
+        or value.ndim != 3
+        or value.shape[0] != 902
+        or value.shape[1] <= 0
+        or value.shape[2] != 512
         or not value.is_contiguous()
         or tuple(module.normalized_shape) != (512,)
         or module.weight is None

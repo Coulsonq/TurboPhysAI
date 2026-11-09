@@ -26,7 +26,7 @@ import torch
 import torch.nn.functional as F
 
 
-_SHAPES = {(902, 8, 3200), (102, 8, 3200), (100, 8, 3200)}
+_SEQUENCE_LENGTHS = {902, 102, 100}
 _compiled_backward = None
 
 
@@ -59,7 +59,8 @@ class _ReluDropout(torch.autograd.Function):
 
 def _can_fuse(value, probability, training):
     return (
-        value.is_cuda and value.dtype == torch.float32 and tuple(value.shape) in _SHAPES
+        value.is_cuda and value.dtype == torch.float32 and value.ndim == 3
+        and value.shape[0] in _SEQUENCE_LENGTHS and value.shape[1] > 0 and value.shape[2] == 3200
         and value.is_contiguous() and value.requires_grad and probability == 0.1 and training
         and not torch.compiler.is_compiling()
     )

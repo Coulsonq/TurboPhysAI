@@ -99,7 +99,10 @@ def pool_forward_wrapper(original, options):
             and _pair(self.dilation) == (1, 1)
             and not self.ceil_mode
             and not self.return_indices
-            and tuple(value.shape) == (8, 64, 240, 320)
+            and value.ndim == 4
+            and value.shape[0] > 0
+            and tuple(value.shape[1:]) == (64, 240, 320)
+            and value.numel() < 2**31
             and value.is_cuda
             and value.dtype == torch.float32
             and value.requires_grad
