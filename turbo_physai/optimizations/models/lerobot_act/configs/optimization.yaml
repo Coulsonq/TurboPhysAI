@@ -114,5 +114,48 @@ optimization_groups:
       - ast-v1:6082527eec9a5ed46ede7d3e8ae90a869a1ace8f43e1051c5e2826edf8637a1f
       torch.nn.modules.normalization.LayerNorm.forward:
       - ast-v1:46d7794087369ccf8d2a6db2fe49508998e29fda386234a2b38defd2b3db01f3
+- id: lerobot_act.apex_fused_adamw
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.optim.optimizers.AdamWConfig.build:
+      - source-v1:a7275063c36be907f1c25d69476e4a9ca1d7d74192e76e7651c0db8576f05864
+    ast_hashes:
+      lerobot.optim.optimizers.AdamWConfig.build:
+      - ast-v1:512fd8832a87140d63727b8e50e3c47cd58f8f2c2ba659079b782ea3595b9d21
+- id: lerobot_act.encoder_regions_compile
+  enabled: true
+  options:
+    main_encoder: true
+    vae_encoder: true
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoder.forward:
+      - source-v1:2c20e4bc4775c5bfb1c4417afcb1d5c134a5ca340c13b2f689b195fb1b88b628
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACTEncoder.forward:
+      - ast-v1:f412b6c886909d12aa185f65de49c70d6c57f7472f7f25135be20493866a1526
+- id: lerobot_act.decoder_region_compile
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      lerobot.policies.act.modeling_act.ACTDecoder.forward:
+      - source-v1:56bd3e690079a7746bbf5dfa4e20e946d47890957cebe187fed907239063197e
+    ast_hashes:
+      lerobot.policies.act.modeling_act.ACTDecoder.forward:
+      - ast-v1:15dc1277021bd26a9c2ac66e74a9d2fd71c2e9bc7f5683d0124cf90e08a772e7
+- id: lerobot_act.ffn_region_compile
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      turbo_physai.optimizations.models.lerobot_act.ffn_fusion._ffn:
+      - source-v1:9f6f4a0e6c1267d50885187bc9f4cb0d564f2bb6cc4848364754baf6b7f01bf5
+    ast_hashes:
+      turbo_physai.optimizations.models.lerobot_act.ffn_fusion._ffn:
+      - ast-v1:3bfb083d653f187e038f6c4931c624234b9a1a6869e4b88904ea4e8f4cf2be42
 optimization_modules:
 - turbo_physai.optimizations.models.lerobot_act.catalog
+- turbo_physai.optimizations.models.lerobot_act.compile_regions_catalog

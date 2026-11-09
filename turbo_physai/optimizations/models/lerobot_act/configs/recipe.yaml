@@ -10,6 +10,7 @@ model:
   name: LeRobot-ACT
 optimization_modules:
   - turbo_physai.optimizations.models.lerobot_act.catalog
+  - turbo_physai.optimizations.models.lerobot_act.compile_regions_catalog
 optimization_groups:
   - id: lerobot_act.ddp_find_unused
     enabled: true
@@ -24,4 +25,15 @@ optimization_groups:
   - id: lerobot_act.pool_backward_gather
     enabled: true
   - id: lerobot_act.layernorm_apex_backward
+    enabled: true
+  - id: lerobot_act.apex_fused_adamw
+    enabled: true
+  - id: lerobot_act.encoder_regions_compile
+    enabled: true
+    options:
+      main_encoder: true
+      vae_encoder: true
+  - id: lerobot_act.decoder_region_compile
+    enabled: true
+  - id: lerobot_act.ffn_region_compile
     enabled: true

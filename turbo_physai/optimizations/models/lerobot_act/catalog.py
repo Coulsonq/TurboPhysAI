@@ -93,3 +93,11 @@ ACT_LAYERNORM_BACKWARD = group(
         replacement="turbo_physai.optimizations.models.lerobot_act.layer_norm.wrap_layer_norm",
     ),
 )
+
+APEX_FUSED_ADAMW = group(
+    "lerobot_act.apex_fused_adamw",
+    wrap(
+        target="lerobot.optim.optimizers.AdamWConfig.build",
+        replacement="turbo_physai.optimizations.models.lerobot_act.adamw.wrap_apex_fused",
+    ),
+)
