@@ -14,22 +14,6 @@ DDP_FIND_UNUSED = group(
     ),
 )
 
-CHANNELS_LAST = group(
-    "lerobot_act.channels_last",
-    wrap(
-        target="lerobot.policies.act.modeling_act.ACT.__init__",
-        replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.act_init_wrapper",
-    ),
-    wrap(
-        target="torchvision.models._utils.IntermediateLayerGetter.forward",
-        replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.backbone_forward_wrapper",
-    ),
-    wrap(
-        target="lerobot.optim.optimizers._save_single_optimizer_state",
-        replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.optimizer_save_wrapper",
-    ),
-)
-
 CHANNELS_LAST_COMPILE = group(
     "lerobot_act.channels_last_backbone_compile",
     wrap(
@@ -37,12 +21,20 @@ CHANNELS_LAST_COMPILE = group(
         replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.act_init_wrapper",
     ),
     wrap(
-        target="torchvision.models._utils.IntermediateLayerGetter.forward",
-        replacement="turbo_physai.optimizations.models.lerobot_act.backbone_compile.compiled_backbone_forward_wrapper",
+        target="torch.nn.modules.conv.Conv2d.forward",
+        replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.conv_forward_wrapper",
     ),
     wrap(
         target="lerobot.optim.optimizers._save_single_optimizer_state",
         replacement="turbo_physai.optimizations.models.lerobot_act.channels_last.optimizer_save_wrapper",
+    ),
+    wrap(
+        target="lerobot.policies.act.modeling_act.ACTPolicy.__init__",
+        replacement="turbo_physai.optimizations.models.lerobot_act.backbone_compile.policy_init_wrapper",
+    ),
+    wrap(
+        target="torchvision.models._utils.IntermediateLayerGetter.forward",
+        replacement="turbo_physai.optimizations.models.lerobot_act.backbone_compile.compiled_backbone_forward_wrapper",
     ),
 )
 

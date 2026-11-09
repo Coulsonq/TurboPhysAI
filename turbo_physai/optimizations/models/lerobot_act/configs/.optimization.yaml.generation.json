@@ -4,7 +4,7 @@
   "model_commit": "3f2179f3b69708b6ad009b2e7685dd9d05269ee1",
   "config": {
     "path": "optimization.yaml",
-    "sha256": "2147f34dc66b86065aefef41e4fcc9c0c3514c0ddace7df6fd33258297a17371"
+    "sha256": "6489e88065ddeb7a2241802264a4ce4bb9691a4fc937c497205eaabb254a4cd9"
   },
   "inputs": [
     {
@@ -17,7 +17,7 @@
       "role": "catalog",
       "base": "package",
       "path": "optimizations/models/lerobot_act/catalog.py",
-      "sha256": "0d05ce0a1859adcd1e6e9d60d431f6c90372b6d403b46b07d92c3e017a6753ab"
+      "sha256": "148bd04018d3b850b56936e031def755268c04855d933b138dec0a9045076805"
     }
   ]
 }

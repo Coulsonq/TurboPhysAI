@@ -40,7 +40,9 @@ def attention_forward_wrapper(original, options):
             and self.dropout == 0.1
             and not getattr(self, "batch_first", False)
             and query.ndim == 3
-            and tuple(query.shape) == (902, 8, 512)
+            and query.shape[0] == 902
+            and query.shape[1] > 0
+            and query.shape[2] == 512
             and query.is_cuda
             and query.dtype == torch.float32
             and not torch.compiler.is_compiling()
@@ -48,7 +50,9 @@ def attention_forward_wrapper(original, options):
         if not eligible:
             return original(self, query, key, value, *args, **kwargs)
         if compiled is None:
-            compiled = torch.compile(original, mode="default", dynamic=False)
+            compiled = torch.compile(
+                original, dynamic=False, options={"fallback_random": True}
+            )
         return compiled(self, query, key, value, *args, **kwargs)
 
     return wrapped

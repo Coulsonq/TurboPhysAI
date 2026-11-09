@@ -20,20 +20,20 @@ def act_init_wrapper(original, options):
         if hasattr(self, "backbone") and hasattr(self, "encoder_img_feat_input_proj"):
             self.backbone.to(memory_format=torch.channels_last)
             self.encoder_img_feat_input_proj.to(memory_format=torch.channels_last)
-            setattr(self.backbone, _MARKER, True)
+            setattr(self.backbone.conv1, _MARKER, True)
         return result
 
     return wrapped
 
 
-def backbone_forward_wrapper(original, options):
+def conv_forward_wrapper(original, options):
     del options
 
     @functools.wraps(original)
-    def wrapped(self, image, *args, **kwargs):
+    def wrapped(self, input, *args, **kwargs):
         if getattr(self, _MARKER, False):
-            image = image.to(memory_format=torch.channels_last)
-        return original(self, image, *args, **kwargs)
+            input = input.to(memory_format=torch.channels_last)
+        return original(self, input, *args, **kwargs)
 
     return wrapped
 
