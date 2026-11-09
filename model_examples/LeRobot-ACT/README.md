@@ -155,7 +155,18 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
 
 ### 4.2 TurboPhysAI 训练
 
-使用空的 OptimizationConfig 和 RuntimeConfig，不启用优化组和 NUMA 绑定。
+使用 ACT 优化配置训练。`lerobot_act.apex_fused_adamw` 默认开启，需安装与当前 Torch 匹配的 Apex；该优化只对单设备 FP32 参数生效，参数缺失梯度时会报错停止。原 AdamW 与 Apex 的优化器断点不能互相恢复。
+
+如需关闭 Apex，将 `configs/recipe.yaml` 中该组的 `enabled` 改为 `false`，再重新生成配置：
+
+```bash
+env -u PYTHONPATH turbo-physai optimization generate \
+  --recipe /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/recipe.yaml \
+  --repo /workspace/lerobot \
+  --commit 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 \
+  --output /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/optimization.yaml \
+  --force
+```
 
 ```bash
 cd /workspace/lerobot
