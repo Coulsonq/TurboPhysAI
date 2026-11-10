@@ -18,9 +18,10 @@
 # The native-forward / fused-backward implementation is also adapted from a
 # local ACT-H20 experiment whose ownership and license remain to be confirmed.
 
-"""Fuse only the ReLU/dropout backward pair for validated ACT FP32 shapes."""
+"""ACT FFN backward fusion and optional packed Q/K projection."""
 
 import functools
+import math
 
 import torch
 import torch.nn.functional as F
@@ -83,8 +84,45 @@ def _ffn(layer, value):
     return layer.linear2(hidden)
 
 
+def _qk_packed_attention(mha, query, value, key_padding_mask):
+    """Evaluate ACT self-attention with Q and K sharing one projection."""
+    seq, batch, embed = query.shape
+    bias = mha.in_proj_bias
+    qk = F.linear(query, mha.in_proj_weight[: 2 * embed], None if bias is None else bias[: 2 * embed])
+    q, k = qk.chunk(2, dim=-1)
+    v = F.linear(value, mha.in_proj_weight[2 * embed :], None if bias is None else bias[2 * embed :])
+    head_dim = embed // mha.num_heads
+
+    def heads(tensor):
+        return tensor.reshape(seq, batch * mha.num_heads, head_dim).transpose(0, 1)
+
+    q, k, v = heads(q), heads(k), heads(v)
+    scores = torch.bmm(q / math.sqrt(head_dim), k.transpose(1, 2))
+    if key_padding_mask is not None:
+        mask = key_padding_mask[:, None, None, :].expand(batch, mha.num_heads, 1, seq)
+        mask = mask.reshape(batch * mha.num_heads, 1, seq)
+        scores = scores.masked_fill(mask, float("-inf")) if mask.dtype == torch.bool else scores + mask
+    weights = F.dropout(torch.softmax(scores, dim=-1), p=mha.dropout, training=mha.training)
+    result = torch.bmm(weights, v).transpose(0, 1).contiguous().view(seq * batch, embed)
+    return F.linear(result, mha.out_proj.weight, mha.out_proj.bias).view(seq, batch, embed)
+
+
+def _qk_supported(mha, query, value, key_padding_mask):
+    return (
+        not mha.batch_first and mha.in_proj_weight is not None
+        and mha.bias_k is None and mha.bias_v is None and not mha.add_zero_attn
+        and query.ndim == 3 and query.shape == value.shape and query.shape[-1] == mha.embed_dim
+        and (key_padding_mask is None or (
+            key_padding_mask.shape == (query.shape[1], query.shape[0])
+            and (key_padding_mask.dtype == torch.bool or torch.is_floating_point(key_padding_mask))
+        ))
+    )
+
+
 def encoder_wrapper(original, options):
-    del options
+    qk_projection = options.get("qk_projection", True)
+    if not isinstance(qk_projection, bool):
+        raise ValueError("qk_projection must be a boolean")
 
     @functools.wraps(original)
     def wrapped(self, x, pos_embed=None, key_padding_mask=None):
@@ -94,7 +132,10 @@ def encoder_wrapper(original, options):
         if self.pre_norm:
             x = self.norm1(x)
         q = k = x if pos_embed is None else x + pos_embed
-        x = self.self_attn(q, k, value=x, key_padding_mask=key_padding_mask)[0]
+        if qk_projection and pos_embed is not None and _qk_supported(self.self_attn, q, x, key_padding_mask):
+            x = _qk_packed_attention(self.self_attn, q, x, key_padding_mask)
+        else:
+            x = self.self_attn(q, k, value=x, key_padding_mask=key_padding_mask)[0]
         x = skip + self.dropout1(x)
         if self.pre_norm:
             skip = x

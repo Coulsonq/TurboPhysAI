@@ -14,6 +14,14 @@ DDP_FIND_UNUSED = group(
     ),
 )
 
+NONBLOCKING_H2D = group(
+    "lerobot_act.nonblocking_h2d",
+    wrap(
+        target="accelerate.accelerator.Accelerator.__init__",
+        replacement="turbo_physai.optimizations.models.lerobot_act.h2d.accelerator_init_wrapper",
+    ),
+)
+
 CHANNELS_LAST_COMPILE = group(
     "lerobot_act.channels_last_backbone_compile",
     wrap(

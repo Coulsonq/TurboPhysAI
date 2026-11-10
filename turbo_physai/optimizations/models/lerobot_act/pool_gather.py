@@ -66,7 +66,10 @@ class _PoolGather(torch.autograd.Function):
 
 
 def act_forward_wrapper(original, options):
-    del options
+    if options.get("vae_no_clone", False):
+        from .vae_no_clone import make_replacement
+
+        original = make_replacement(original)
 
     @functools.wraps(original)
     def wrapped(self, *args, **kwargs):

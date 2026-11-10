@@ -14,16 +14,25 @@ optimization_modules:
 optimization_groups:
   - id: lerobot_act.ddp_find_unused
     enabled: true
+    options:
+      static_graph: true
+      broadcast_buffers: false
+  - id: lerobot_act.nonblocking_h2d
+    enabled: true
   - id: lerobot_act.channels_last_backbone_compile
     enabled: true
   - id: lerobot_act.sampler_vector
     enabled: true
   - id: lerobot_act.ffn_backward_fusion
     enabled: true
+    options:
+      qk_projection: true
   - id: lerobot_act.attention_compile
     enabled: true
   - id: lerobot_act.pool_backward_gather
     enabled: true
+    options:
+      vae_no_clone: true
   - id: lerobot_act.layernorm_apex_backward
     enabled: true
   - id: lerobot_act.apex_fused_adamw
