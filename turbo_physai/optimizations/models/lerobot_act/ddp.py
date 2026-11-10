@@ -8,7 +8,6 @@ import inspect
 
 
 def ddp_find_unused_wrapper(original, options):
-    del options
     signature = inspect.signature(original)
 
     @functools.wraps(original)
@@ -16,10 +15,12 @@ def ddp_find_unused_wrapper(original, options):
         from lerobot.policies.act.modeling_act import ACTPolicy
 
         bound = signature.bind(*args, **kwargs)
-        if isinstance(bound.arguments.get("module"), ACTPolicy) and bound.arguments.get(
-            "find_unused_parameters"
-        ) is True:
-            bound.arguments["find_unused_parameters"] = False
+        if isinstance(bound.arguments.get("module"), ACTPolicy):
+            if bound.arguments.get("find_unused_parameters") is True:
+                bound.arguments["find_unused_parameters"] = False
+            for key in ("static_graph", "broadcast_buffers"):
+                if key in options:
+                    bound.arguments[key] = options[key]
         return original(*bound.args, **bound.kwargs)
 
     return wrapped

@@ -14,7 +14,9 @@ compatibility:
 optimization_groups:
 - id: lerobot_act.ddp_find_unused
   enabled: true
-  options: {}
+  options:
+    broadcast_buffers: false
+    static_graph: true
   trust:
     source_hashes:
       torch.nn.parallel.distributed.DistributedDataParallel.__init__:
@@ -22,6 +24,16 @@ optimization_groups:
     ast_hashes:
       torch.nn.parallel.distributed.DistributedDataParallel.__init__:
       - ast-v1:0904aa9377bcb83e978bf07f6e4814a63b9099b0842bb382437c569a334dffad
+- id: lerobot_act.nonblocking_h2d
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      accelerate.accelerator.Accelerator.__init__:
+      - source-v1:6dea106d9752875ef6c9df463f89a1fd18e76d78262c7d66926cd972b285ef3d
+    ast_hashes:
+      accelerate.accelerator.Accelerator.__init__:
+      - ast-v1:8d3a917c15327dda5af21200c433460b812ca33e92f882f0b8510d8e34f6eab5
 - id: lerobot_act.channels_last_backbone_compile
   enabled: true
   options: {}
@@ -60,7 +72,8 @@ optimization_groups:
       - ast-v1:351b199497a7e82f6020dbc49fe4d3a9b6efe394f889e4629cf909a831ce5cc2
 - id: lerobot_act.ffn_backward_fusion
   enabled: true
-  options: {}
+  options:
+    qk_projection: true
   trust:
     source_hashes:
       lerobot.policies.act.modeling_act.ACTEncoderLayer.forward:
@@ -88,7 +101,8 @@ optimization_groups:
       - ast-v1:bf44fe72124624f5e56901f0446e3f3d9070a54b8a861b052bd792e56de951de
 - id: lerobot_act.pool_backward_gather
   enabled: true
-  options: {}
+  options:
+    vae_no_clone: true
   trust:
     source_hashes:
       lerobot.policies.act.modeling_act.ACT.forward:
