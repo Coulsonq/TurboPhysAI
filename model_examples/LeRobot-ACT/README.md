@@ -57,7 +57,7 @@ git -C lerobot checkout --detach FETCH_HEAD
 ```bash
 cd /workspace &&
 test ! -e TurboPhysAI && test ! -L TurboPhysAI &&
-git clone --branch ACT-TurboPhysAI \
+git clone --branch ACT-turbo-gitlab-base \
   https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI &&
 git -C TurboPhysAI rev-parse HEAD &&
 env -u PYTHONPATH python -m pip install --no-deps \

@@ -3,7 +3,7 @@
 # The index mapping is adapted from a local ACT-H20 experiment whose ownership
 # and license remain to be confirmed before distribution.
 
-"""Vectorized episode-to-frame mapping with unchanged shuffle and resume order."""
+"""Vectorized episode-frame mapping, preserving sampler order and resume state."""
 
 import functools
 

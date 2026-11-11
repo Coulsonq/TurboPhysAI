@@ -1,7 +1,10 @@
 # Copyright 2026 Hygon Information Technology Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
+"""ACT max-pool backward gather, adapted from the v6 HCU candidate.
 
-"""Experimental HCU ACT max-pool backward gather, inspired by ACT-H20."""
+The caller must mark the ACT backbone pool through an Engine-declared target.
+The original implementation remains the fallback for unsupported inputs.
+"""
 
 import functools
 
@@ -10,7 +13,7 @@ import triton
 import triton.language as tl
 
 
-_MARKER = "_turbo_lerobot_act_pool_gather"
+_MARKER = '_turbo_lerobot_act_pool_gather'
 
 
 @triton.jit
@@ -65,21 +68,12 @@ class _PoolGather(torch.autograd.Function):
         return output
 
 
-def act_forward_wrapper(original, options):
-    if options.get("vae_no_clone", False):
-        from .vae_no_clone import make_replacement
-
-        original = make_replacement(original)
-
-    @functools.wraps(original)
-    def wrapped(self, *args, **kwargs):
-        backbone = getattr(self, "backbone", None)
-        pool = getattr(backbone, "maxpool", None)
-        if pool is not None:
-            setattr(pool, _MARKER, True)
-        return original(self, *args, **kwargs)
-
-    return wrapped
+def mark_act_pool(act):
+    """Mark only the pool belonging to this ACT backbone, if present."""
+    backbone = getattr(act, 'backbone', None)
+    pool = getattr(backbone, 'maxpool', None)
+    if isinstance(pool, torch.nn.MaxPool2d):
+        setattr(pool, _MARKER, True)
 
 
 def _pair(value):

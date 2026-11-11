@@ -1,6 +1,6 @@
+# Copyright 2026 Hygon Information Technology Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
-
-"""Optional Apex LayerNorm backward for the measured ACT encoder shape."""
+"""Combinable ACT-scoped Apex LayerNorm backward, adapted from v6."""
 
 from contextvars import ContextVar
 from functools import wraps
@@ -14,7 +14,7 @@ except (ImportError, OSError):
     fused_layer_norm_cuda = None
 
 
-_ACT_POLICY_ACTIVE = ContextVar("turbo_lerobot_act_policy_active", default=False)
+_ACT_POLICY_ACTIVE = ContextVar('turbo_lerobot_act_policy_active', default=False)
 
 
 class _ApexBackward(torch.autograd.Function):
@@ -43,7 +43,6 @@ class _ApexBackward(torch.autograd.Function):
             iterator = iter(selected_grads)
             gradients = [next(iterator) if required else None for required in needed]
             return *gradients, None, None
-
         grad_value, grad_weight, grad_bias = fused_layer_norm_cuda.backward_affine(
             grad_output.contiguous(), mean, rstd, value, ctx.normalized_shape,
             weight, bias, ctx.eps,
@@ -58,7 +57,7 @@ def _is_eligible(module, value):
         or not torch.is_grad_enabled()
         or torch.are_deterministic_algorithms_enabled()
         or not isinstance(value, torch.Tensor)
-        or value.device.type != "cuda"
+        or value.device.type != 'cuda'
         or value.dtype != torch.float32
         or value.ndim != 3
         or value.shape[0] != 902
@@ -81,7 +80,6 @@ def _is_eligible(module, value):
 
 def wrap_act_policy(original, options):
     del options
-
     @wraps(original)
     def wrapped(*args, **kwargs):
         token = _ACT_POLICY_ACTIVE.set(True)
@@ -89,17 +87,14 @@ def wrap_act_policy(original, options):
             return original(*args, **kwargs)
         finally:
             _ACT_POLICY_ACTIVE.reset(token)
-
     return wrapped
 
 
 def wrap_layer_norm(original, options):
     del options
-
     @wraps(original)
     def wrapped(module, value):
         if not _ACT_POLICY_ACTIVE.get() or not _is_eligible(module, value):
             return original(module, value)
         return _ApexBackward.apply(value, module.weight, module.bias, (512,), module.eps)
-
     return wrapped

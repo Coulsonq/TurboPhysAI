@@ -4,26 +4,20 @@
   "model_commit": "3f2179f3b69708b6ad009b2e7685dd9d05269ee1",
   "config": {
     "path": "optimization.yaml",
-    "sha256": "67b5612f0fa5157ff959b1441786ff566ad16af1f22a3eced60a8b44f5ba4dd4"
+    "sha256": "f0c481b83272c24b150e2d5979d476eb8d362432ae0cb31f427be1a0be94a6e1"
   },
   "inputs": [
     {
       "role": "recipe",
       "base": "package",
       "path": "optimizations/models/lerobot_act/configs/recipe.yaml",
-      "sha256": "563c8b19c58182712bc5a6870d6291938403e1a7d84a56dafa8131937aad6b66"
+      "sha256": "92673ba5af3a60ed1229476ce109e620b1acbc9e103f1c70e773a181e668983c"
     },
     {
       "role": "catalog",
       "base": "package",
       "path": "optimizations/models/lerobot_act/catalog.py",
-      "sha256": "49dfc10526131582bc187120a8797ad8c8d28b09989c42cf5f47aea39e80d619"
-    },
-    {
-      "role": "catalog",
-      "base": "package",
-      "path": "optimizations/models/lerobot_act/compile_regions_catalog.py",
-      "sha256": "a6c80384fa7255fee3580ba2355da6665a40d7eb1a608a018e174bbf3d10f244"
+      "sha256": "67d101cd209503e449ef21a7f5581f127051f7678d37946a0d77061e250f9fda"
     }
   ]
 }
