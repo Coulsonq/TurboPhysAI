@@ -2,44 +2,21 @@
 
 在海光 HCU 上运行 LeRobot ACT 原生训练和 TurboPhysAI 配置训练。
 
-## 1. 环境准备
+## 1. 模型简介
 
-基础镜像包含 Python 3.12、海光 Torch 2.13 和 torchvision 0.28。
+[LeRobot ACT](https://github.com/huggingface/lerobot) 是面向机器人操作任务的动作序列预测模型。
 
-以下命令在宿主机执行，容器名可自行修改。
+## 2. 优化接入基线
 
-### 1.1 拉取基础镜像
+TurboPhysAI 的 ACT 优化基于 LeRobot commit `3f2179f3b69708b6ad009b2e7685dd9d05269ee1`。
 
-```bash
-docker pull harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal
-```
+## 3. 准备训练环境
 
-### 1.2 创建并进入容器
+按照[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)准备海光 HCU 环境。本文使用 Python 3.12、海光 Torch 2.13 和 torchvision 0.28；运行时配置启用了 NUMA 绑定，容器需具备 `SYS_NICE` 权限。下文命令均在准备好的环境中执行。
 
-```bash
-docker run -d \
-  --name=lerobot-act-turbophysai-v2 \
-  --device=/dev/kfd \
-  --device=/dev/dri \
-  --group-add video \
-  --cap-drop=ALL \
-  --cap-add=SYS_NICE \
-  --security-opt no-new-privileges \
-  --shm-size=64G \
-  --ulimit memlock=-1:-1 \
-  -v /opt/hyhal:/opt/hyhal:ro \
-  -w /workspace \
-  --entrypoint /bin/bash \
-  harbor.sourcefind.cn:5443/hcu/admin/base/pytorch:2.13.0-ubuntu22.04-dtk26.10-py3.12-minimal \
-  -c 'sleep infinity' &&
-docker exec -it lerobot-act-turbophysai-v2 bash
-```
+## 4. 安装源码及依赖
 
-后续命令均在容器内执行。
-
-## 2. 安装环境及源码
-
-### 2.1 拉取官方源码
+### 4.1 拉取官方源码
 
 拉取 LeRobot 官方源码。
 
@@ -52,7 +29,7 @@ git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 &
 git -C lerobot checkout --detach FETCH_HEAD
 ```
 
-### 2.2 拉取并安装 TurboPhysAI
+### 4.2 拉取并安装 TurboPhysAI
 
 ```bash
 cd /workspace &&
@@ -66,7 +43,7 @@ env -u PYTHONPATH python -m pip install \
   --no-deps --no-build-isolation -e /workspace/TurboPhysAI
 ```
 
-### 2.3 安装环境
+### 4.3 安装依赖
 
 安装 [requirements.txt](requirements.txt) 和 LeRobot 源码；安装 LeRobot 时使用 `--no-deps`。
 
@@ -95,9 +72,9 @@ python -m pip install --no-deps \
   --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
 
-## 3. 下载数据和权重
+## 5. 下载数据和权重
 
-### 3.1 下载数据集
+### 5.1 下载数据集
 
 设置 HF 镜像地址并下载 [LeRobot 官方数据集](https://huggingface.co/datasets/lerobot/aloha_mobile_cabinet)：
 
@@ -112,7 +89,7 @@ python -c 'from huggingface_hub import snapshot_download; snapshot_download(
 )'
 ```
 
-### 3.2 下载权重
+### 5.2 下载权重
 
 下载 ACT 使用的 ResNet18 预训练骨干权重：
 
@@ -121,11 +98,11 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
   python -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(check_hash=True)'
 ```
 
-## 4. 运行训练
+## 6. 运行训练
 
-以下示例每卡 `batch_size=8`、`num_workers=4`；原生训练使用单卡运行 10 步，Turbo 训练默认使用 8 卡运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
+原生训练使用单卡、每卡 batch size 8、4 个 worker，运行 10 步；Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
 
-### 4.1 原生训练
+### 6.1 原生训练
 
 ```bash
 cd /workspace/lerobot
@@ -153,9 +130,9 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
   2>&1 | tee -a "/workspace/act_runs/native_1gpu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
 
-### 4.2 TurboPhysAI 训练
+### 6.2 TurboPhysAI 训练
 
-使用 ACT 优化配置训练。`lerobot_act.apex_fused_adamw` 默认开启，需安装与当前 Torch 匹配的 Apex；该优化只对单设备 FP32 参数生效，参数缺失梯度时会报错停止。原 AdamW 与 Apex 的优化器断点不能互相恢复。
+使用 ACT 优化配置训练。`lerobot_act.apex_fused_adamw` 默认开启，需安装与当前 Torch 匹配的 Apex；原 AdamW 与 Apex 的优化器断点不能互相恢复。
 
 如需关闭 Apex，将 `configs/recipe.yaml` 中该组的 `enabled` 改为 `false`，再重新生成配置：
 
