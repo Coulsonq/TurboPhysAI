@@ -94,37 +94,9 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 6. 运行训练
 
-原生训练使用单卡、每卡 batch size 8、4 个 worker，运行 10 步；Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
+Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
 
-### 6.1 原生训练
-
-```bash
-cd /workspace/lerobot
-mkdir -p /workspace/act_runs
-BATCH_SIZE=8
-STAMP="$(date +%Y%m%d_%H%M%S)"
-env -u PYTHONPATH HIP_VISIBLE_DEVICES=0 \
-  LD_LIBRARY_PATH="/workspace/act_ffmpeg4/rootfs/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
-  TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
-  python -m lerobot.scripts.lerobot_train \
-    --policy.type=act \
-    --policy.device=cuda \
-    --policy.push_to_hub=false \
-    --dataset.repo_id=lerobot/aloha_mobile_cabinet \
-    --dataset.root=/workspace/act_assets/data/LeRobot-ACT/aloha_mobile_cabinet \
-    --dataset.revision=7a752b39f7e69de7e38aee485a6bab07528a061a \
-    --dataset.video_backend=torchcodec \
-    --batch_size="${BATCH_SIZE}" \
-    --num_workers=4 \
-    --steps=10 \
-    --log_freq=1 \
-    --seed=42 \
-    --wandb.enable=false \
-    --output_dir=/workspace/act_runs/native_10step \
-  2>&1 | tee -a "/workspace/act_runs/native_1gpu_bs${BATCH_SIZE}_${STAMP}.log"
-```
-
-### 6.2 TurboPhysAI 训练
+### 6.1 TurboPhysAI 训练
 
 使用 ACT 优化配置训练。`lerobot_act.apex_fused_adamw` 默认开启，需安装与当前 Torch 匹配的 Apex；原 AdamW 与 Apex 的优化器断点不能互相恢复。
 
