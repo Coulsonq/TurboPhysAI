@@ -31,7 +31,7 @@ git -C lerobot checkout --detach FETCH_HEAD
 
 ### 4.2 安装依赖
 
-下载海光 TurboPhysAI main 分支中的 ACT 依赖文件。该文件尚未合入 main，合入后可执行：
+下载海光 TurboPhysAI main 分支中的 ACT 依赖文件：
 
 ```bash
 curl -fL --create-dirs \
