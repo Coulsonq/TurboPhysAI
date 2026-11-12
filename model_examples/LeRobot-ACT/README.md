@@ -1,6 +1,6 @@
 # LeRobot ACT 模型应用说明
 
-本文介绍在海光HCU上的LeRobot-ACT依赖安装、资源准备及训练启动。
+本文介绍在海光 HCU 上的 LeRobot-ACT 依赖安装、资源准备及训练启动。
 
 ## 1. 模型简介
 
