@@ -94,20 +94,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 6. 运行训练
 
-Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。Turbo 的进程数根据 `GPU_IDS` 自动计算。
-
-使用 ACT 优化配置训练。`lerobot_act.apex_fused_adamw` 默认开启，需安装与当前 Torch 匹配的 Apex；原 AdamW 与 Apex 的优化器断点不能互相恢复。
-
-如需关闭 Apex，将 `configs/recipe.yaml` 中该组的 `enabled` 改为 `false`，再重新生成配置：
-
-```bash
-env -u PYTHONPATH turbo-physai optimization generate \
-  --recipe /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/recipe.yaml \
-  --repo /workspace/lerobot \
-  --commit 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 \
-  --output /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/optimization.yaml \
-  --force
-```
+Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。
 
 ```bash
 cd /workspace/lerobot
