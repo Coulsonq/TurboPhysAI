@@ -31,6 +31,12 @@ git -C lerobot checkout --detach FETCH_HEAD
 
 ### 4.2 安装依赖
 
+拉取海光 TurboPhysAI 的 main 分支代码，仅用于获取环境安装所需的 requirements 文件。
+
+```bash
+git clone --branch main https://github.com/HYGON-AI/TurboPhysAI.git /workspace/TurboPhysAI
+```
+
 安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec。
 
 ```bash
