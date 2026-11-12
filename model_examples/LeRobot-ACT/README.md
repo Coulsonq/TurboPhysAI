@@ -31,7 +31,7 @@ git -C lerobot checkout --detach FETCH_HEAD
 
 ### 4.2 安装依赖
 
-安装 [requirements.txt](requirements.txt) 中的依赖、LeRobot 源码和 torchcodec，并准备 FFmpeg 运行库。
+安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec。
 
 ```bash
 python -m pip install \
