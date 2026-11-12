@@ -1,6 +1,6 @@
 # LeRobot ACT 模型应用说明
 
-在海光 HCU 上运行 LeRobot ACT 原生训练和 TurboPhysAI 配置训练。
+本文介绍在海光HCU上的LeRobot-ACT依赖安装、资源准备及训练启动。
 
 ## 1. 模型简介
 
