@@ -29,21 +29,7 @@ git -C lerobot fetch --depth 1 origin 3f2179f3b69708b6ad009b2e7685dd9d05269ee1 &
 git -C lerobot checkout --detach FETCH_HEAD
 ```
 
-### 4.2 拉取并安装 TurboPhysAI
-
-```bash
-cd /workspace &&
-test ! -e TurboPhysAI && test ! -L TurboPhysAI &&
-git clone --branch ACT-turbo-gitlab-base \
-  https://github.com/Coulsonq/TurboPhysAI.git TurboPhysAI &&
-git -C TurboPhysAI rev-parse HEAD &&
-env -u PYTHONPATH python -m pip install --no-deps \
-  --index-url https://pypi.tuna.tsinghua.edu.cn/simple 'setuptools>=71,<81' &&
-env -u PYTHONPATH python -m pip install \
-  --no-deps --no-build-isolation -e /workspace/TurboPhysAI
-```
-
-### 4.3 安装依赖
+### 4.2 安装依赖
 
 安装 [requirements.txt](requirements.txt) 和 LeRobot 源码；安装 LeRobot 时使用 `--no-deps`。
 
