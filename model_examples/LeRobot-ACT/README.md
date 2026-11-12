@@ -12,7 +12,7 @@ TurboPhysAI 的 ACT 优化基于 LeRobot commit `3f2179f3b69708b6ad009b2e7685dd9
 
 ## 3. 准备训练环境
 
-按照[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)准备海光 HCU 环境。本文使用 Python 3.12、海光 Torch 2.13 和 torchvision 0.28；运行时配置启用了 NUMA 绑定，容器需具备 `SYS_NICE` 权限。下文命令均在准备好的环境中执行。
+按照[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)准备海光 HCU 环境。下文命令均在准备好的环境中执行。
 
 ## 4. 安装源码及依赖
 
