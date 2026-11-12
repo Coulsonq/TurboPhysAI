@@ -94,7 +94,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 ## 6. 运行训练
 
-Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100 步。
+Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100000 步。
 
 ```bash
 cd /workspace/lerobot
@@ -122,9 +122,9 @@ env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
       --batch_size="${BATCH_SIZE}" \
       --num_workers=8 \
       --prefetch_factor=2 \
-      --steps=100 \
+      --steps=100000 \
       --log_freq=1 \
       --wandb.enable=false \
       --output_dir="/workspace/act_runs/turbo_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}" \
-  2>&1 | tee -a "/workspace/act_runs/ACT_BW1100_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}.log"
+  2>&1 | tee -a "/workspace/act_runs/ACT_${GPU_COUNT}gpu_bs${BATCH_SIZE}_${STAMP}.log"
 ```
