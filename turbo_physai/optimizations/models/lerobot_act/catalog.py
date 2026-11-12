@@ -12,95 +12,87 @@ BASE = "turbo_physai.optimizations.models.lerobot_act"
 ACT = "lerobot.policies.act.modeling_act"
 
 
-CHANNELS_LAST = group(
-    "lerobot_act.reference_channels_last",
+CHANNELS_LAST_POOL = group(
+    "lerobot_act.channels_last_pool",
     wrap(
         target=f"{ACT}.ACT.__init__",
-        replacement=f"{BASE}.reference_model.act_init_wrapper",
+        replacement=f"{BASE}.model_optimizations.channels_last_init_wrapper",
     ),
     wrap(
         target="torch.nn.modules.conv.Conv2d.forward",
-        replacement=f"{BASE}.reference_model.conv_forward_wrapper",
+        replacement=f"{BASE}.model_optimizations.channels_last_input_wrapper",
     ),
     wrap(
         target="lerobot.optim.optimizers._save_single_optimizer_state",
-        replacement=f"{BASE}.reference_model.optimizer_save_wrapper",
+        replacement=f"{BASE}.model_optimizations.contiguous_optimizer_state_wrapper",
+    ),
+    wrap(
+        target="torch.nn.modules.pooling.MaxPool2d.forward",
+        replacement=f"{BASE}.pool_backward_gather.max_pool_backward_gather_wrapper",
     ),
 )
 
-BACKBONE = group(
-    "lerobot_act.reference_backbone_compile",
-    wrap(
-        target=f"{ACT}.ACTPolicy.__init__",
-        replacement=f"{BASE}.reference_model.policy_init_wrapper",
-    ),
+BACKBONE_COMPILE = group(
+    "lerobot_act.backbone_compile",
     wrap(
         target="torchvision.models._utils.IntermediateLayerGetter.forward",
-        replacement=f"{BASE}.reference_model.backbone_forward_wrapper",
+        replacement=f"{BASE}.model_optimizations.backbone_compile_wrapper",
     ),
 )
 
 NO_ATTN_AVERAGE = group(
-    "lerobot_act.reference_no_attn_average",
-    wrap(
-        target=f"{ACT}.ACTEncoder.__init__",
-        replacement=f"{BASE}.reference_model.encoder_init_wrapper",
-    ),
-    wrap(
-        target=f"{ACT}.ACTDecoder.__init__",
-        replacement=f"{BASE}.reference_model.decoder_init_wrapper",
-    ),
+    "lerobot_act.no_attn_average",
     wrap(
         target="torch.nn.modules.activation.MultiheadAttention.forward",
-        replacement=f"{BASE}.reference_model.attention_forward_wrapper",
+        replacement=f"{BASE}.model_optimizations.attention_no_average_wrapper",
     ),
 )
 
-FFN = group(
-    "lerobot_act.reference_ffn_compile",
+FFN_COMPILE = group(
+    "lerobot_act.ffn_compile",
     wrap(
         target=f"{ACT}.ACTEncoderLayer.forward",
-        replacement=f"{BASE}.reference_model.encoder_ffn_wrapper",
+        replacement=f"{BASE}.model_optimizations.encoder_ffn_compile_wrapper",
     ),
     wrap(
         target=f"{ACT}.ACTDecoderLayer.forward",
-        replacement=f"{BASE}.reference_model.decoder_ffn_wrapper",
+        replacement=f"{BASE}.model_optimizations.decoder_ffn_compile_wrapper",
     ),
 )
 
-ATTENTION_PROBS = group(
-    "lerobot_act.reference_attention_probs",
+ATTENTION_SOFTMAX_DROPOUT = group(
+    "lerobot_act.attention_softmax_dropout",
     wrap(
         target="torch.nn.functional.multi_head_attention_forward",
-        replacement=f"{BASE}.reference_attention.wrap_attention",
+        replacement=f"{BASE}.attention_softmax_dropout.attention_softmax_dropout_wrapper",
     ),
 )
 
-DDP = group(
-    "lerobot_act.reference_ddp",
+DDP_OPTIONS = group(
+    "lerobot_act.ddp_options",
     wrap(
         target="torch.nn.parallel.distributed.DistributedDataParallel.__init__",
-        replacement=f"{BASE}.reference_training.ddp_kwargs_wrapper",
+        replacement=f"{BASE}.training_ddp_h2d.ddp_options_wrapper",
     ),
 )
 
-H2D = group(
-    "lerobot_act.reference_nonblocking_h2d",
+NONBLOCKING_H2D = group(
+    "lerobot_act.nonblocking_h2d",
     wrap(
         target="accelerate.accelerator.Accelerator.__init__",
-        replacement=f"{BASE}.reference_training.accelerator_wrapper",
+        replacement=f"{BASE}.training_ddp_h2d.nonblocking_h2d_wrapper",
     ),
 )
 
-ASYNC_SCALARS = group(
-    "lerobot_act.reference_async_scalars",
+DEFERRED_METRICS_APEX_LAYERNORM = group(
+    "lerobot_act.deferred_metrics_apex_layernorm",
     wrap(
         target=f"{ACT}.ACTPolicy.forward",
-        replacement=f"{BASE}.policy_metrics_layernorm.wrap_policy",
+        replacement=f"{BASE}.policy_metrics_layernorm.deferred_metrics_policy_wrapper",
     ),
     wrap(
         target="torch.nn.modules.normalization.LayerNorm.forward",
-        replacement=f"{BASE}.policy_metrics_layernorm.wrap_layer_norm",
+        replacement=f"{BASE}.policy_metrics_layernorm.apex_layernorm_backward_wrapper",
     ),
 )
 
@@ -108,7 +100,7 @@ SAMPLER_VECTOR = group(
     "lerobot_act.sampler_vector",
     wrap(
         target="lerobot.datasets.sampler.EpisodeAwareSampler._iter_epoch",
-        replacement=f"{BASE}.sampler_vector.sampler_wrapper",
+        replacement=f"{BASE}.sampler_vector.vectorized_sampler_wrapper",
     ),
 )
 
@@ -116,7 +108,7 @@ VAE_NO_CLONE = group(
     "lerobot_act.vae_no_clone",
     wrap(
         target=f"{ACT}.ACT.forward",
-        replacement=f"{BASE}.vae_no_clone.vae_forward_wrapper",
+        replacement=f"{BASE}.vae_no_clone.vae_no_clone_wrapper",
     ),
 )
 
@@ -124,15 +116,6 @@ APEX_FUSED_ADAMW = group(
     "lerobot_act.apex_fused_adamw",
     wrap(
         target="lerobot.optim.optimizers.AdamWConfig.build",
-        replacement=f"{BASE}.apex_fused_adamw.wrap_apex_fused",
+        replacement=f"{BASE}.apex_fused_adamw.apex_fused_adamw_wrapper",
     ),
-)
-
-POOL_GATHER = group(
-    "lerobot_act.pool_backward_gather",
-    wrap(
-        target="torch.nn.modules.pooling.MaxPool2d.forward",
-        replacement=f"{BASE}.pool_backward_gather.pool_forward_wrapper",
-    ),
-    depends_on=("lerobot_act.reference_channels_last",),
 )

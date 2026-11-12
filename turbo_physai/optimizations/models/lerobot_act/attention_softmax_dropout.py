@@ -130,7 +130,7 @@ def _math_attention(
     return output, weights
 
 
-def wrap_attention(original, options):
+def attention_softmax_dropout_wrapper(original, options):
     """Engine wrap factory for ``torch.nn.functional.multi_head_attention_forward``."""
     register_backward = options.get("register_backward", True)
     if not isinstance(register_backward, bool):
@@ -155,17 +155,14 @@ def wrap_attention(original, options):
                       v_proj_weight=v_proj_weight, static_k=static_k, static_v=static_v,
                       average_attn_weights=average_attn_weights, is_causal=is_causal)
         supported = (
-            isinstance(query, torch.Tensor) and query.is_cuda and query.dtype == torch.float32
-            and query.ndim == key.ndim == value.ndim == 3 and training and need_weights
+            query.is_cuda and query.dtype == torch.float32 and training and need_weights
             and not is_causal and attn_mask is None and not add_zero_attn
             and bias_k is None and bias_v is None and static_k is None and static_v is None
             and not use_separate_proj_weight and in_proj_weight is not None
             and key.shape == value.shape and query.shape[1] == key.shape[1]
             and query.shape[2] == key.shape[2] == embed_dim_to_check
-            and num_heads > 0 and embed_dim_to_check % num_heads == 0
             and 0.0 <= dropout_p <= 1.0
             and (key_padding_mask is None or key_padding_mask.shape == (key.shape[1], key.shape[0]))
-            and not torch.overrides.has_torch_function((query, key, value, in_proj_weight, out_proj_weight))
         )
         if not supported:
             return original(*args, **kwargs)

@@ -27,7 +27,7 @@ from pathlib import Path
 EXPECTED_SOURCE_SHA256 = 'a6c1a49c5daafa513b9abee9b986205d327e25c70ed13623ab2e6c0ab6b1f577'
 
 
-def make_replacement(original):
+def make_vae_no_clone_forward(original):
     # Reject unknown source or an already-wrapped function, whose semantics
     # cannot safely be reproduced by this fixed-source candidate.
     if inspect.unwrap(original) is not original:
@@ -45,10 +45,10 @@ def make_replacement(original):
 
     @functools.wraps(original)
     def forward(self, batch):
+        batch_size = batch[OBS_IMAGES][0].shape[0]
         if self.config.use_vae and self.training:
-            assert ACTION in batch, 'actions must be provided when using the variational objective in training mode.'
-        batch_size = batch[OBS_IMAGES][0].shape[0] if OBS_IMAGES in batch else batch[OBS_ENV_STATE].shape[0]
-        if self.config.use_vae and ACTION in batch and self.training:
+            if ACTION not in batch:
+                raise ValueError('VAE training requires actions in the batch.')
             cls_embed = einops.repeat(self.vae_encoder_cls_embed.weight, '1 d -> b 1 d', b=batch_size)
             if self.config.robot_state_feature:
                 robot_state_embed = self.vae_encoder_robot_state_input_proj(batch[OBS_STATE])
@@ -86,15 +86,14 @@ def make_replacement(original):
             encoder_in_tokens.append(self.encoder_robot_state_input_proj(batch[OBS_STATE]))
         if self.config.env_state_feature:
             encoder_in_tokens.append(self.encoder_env_state_input_proj(batch[OBS_ENV_STATE]))
-        if self.config.image_features:
-            for img in batch[OBS_IMAGES]:
-                cam_features = self.backbone(img)['feature_map']
-                cam_pos_embed = self.encoder_cam_feat_pos_embed(cam_features).to(dtype=cam_features.dtype)
-                cam_features = self.encoder_img_feat_input_proj(cam_features)
-                cam_features = einops.rearrange(cam_features, 'b c h w -> (h w) b c')
-                cam_pos_embed = einops.rearrange(cam_pos_embed, 'b c h w -> (h w) b c')
-                encoder_in_tokens.extend(list(cam_features))
-                encoder_in_pos_embed.extend(list(cam_pos_embed))
+        for img in batch[OBS_IMAGES]:
+            cam_features = self.backbone(img)['feature_map']
+            cam_pos_embed = self.encoder_cam_feat_pos_embed(cam_features).to(dtype=cam_features.dtype)
+            cam_features = self.encoder_img_feat_input_proj(cam_features)
+            cam_features = einops.rearrange(cam_features, 'b c h w -> (h w) b c')
+            cam_pos_embed = einops.rearrange(cam_pos_embed, 'b c h w -> (h w) b c')
+            encoder_in_tokens.extend(list(cam_features))
+            encoder_in_pos_embed.extend(list(cam_pos_embed))
         encoder_in_tokens = torch.stack(encoder_in_tokens, axis=0)
         encoder_in_pos_embed = torch.stack(encoder_in_pos_embed, axis=0)
         encoder_out = self.encoder(encoder_in_tokens, pos_embed=encoder_in_pos_embed)
@@ -113,6 +112,6 @@ def make_replacement(original):
     return forward
 
 
-def vae_forward_wrapper(original, options):
+def vae_no_clone_wrapper(original, options):
     del options
-    return make_replacement(original)
+    return make_vae_no_clone_forward(original)

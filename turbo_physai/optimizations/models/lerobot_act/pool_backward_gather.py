@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """ACT max-pool backward gather, adapted from the v6 HCU candidate.
 
-The caller must mark the ACT backbone pool through an Engine-declared target.
-The original implementation remains the fallback for unsupported inputs.
+The ACT backbone pool is marked through an Engine-declared target.
+Unsupported ACT pool inputs raise an error; other pools use the original implementation.
 """
 
 import functools
@@ -55,9 +55,7 @@ class _PoolGather(torch.autograd.Function):
     def backward(ctx, grad_output):
         value, indices = ctx.saved_tensors
         if torch.is_grad_enabled():
-            return torch.ops.aten.max_pool2d_with_indices_backward.default(
-                grad_output, value, [3, 3], [2, 2], [1, 1], [1, 1], False, indices
-            )
+            raise RuntimeError('ACT pool gather does not support higher-order gradients.')
         n, c, h, w = value.shape
         indices = indices.contiguous(memory_format=torch.channels_last)
         grad_output = grad_output.contiguous(memory_format=torch.channels_last)
@@ -72,8 +70,9 @@ def mark_act_pool(act):
     """Mark only the pool belonging to this ACT backbone, if present."""
     backbone = getattr(act, 'backbone', None)
     pool = getattr(backbone, 'maxpool', None)
-    if isinstance(pool, torch.nn.MaxPool2d):
-        setattr(pool, _MARKER, True)
+    if not isinstance(pool, torch.nn.MaxPool2d):
+        raise RuntimeError('ACT backbone maxpool must be a torch.nn.MaxPool2d.')
+    setattr(pool, _MARKER, True)
 
 
 def _pair(value):
@@ -82,29 +81,33 @@ def _pair(value):
     return (value, value) if isinstance(value, int) else tuple(value)
 
 
-def pool_forward_wrapper(original, options):
+def max_pool_backward_gather_wrapper(original, options):
     del options
 
     @functools.wraps(original)
     def wrapped(self, value):
-        eligible = (
-            getattr(self, _MARKER, False)
-            and self.training
-            and _pair(self.kernel_size) == (3, 3)
-            and _pair(self.stride) == (2, 2)
-            and _pair(self.padding) == (1, 1)
-            and _pair(self.dilation) == (1, 1)
-            and not self.ceil_mode
-            and not self.return_indices
-            and value.ndim == 4
-            and value.shape[0] > 0
-            and tuple(value.shape[1:]) == (64, 240, 320)
-            and value.numel() < 2**31
-            and value.is_cuda
-            and value.dtype == torch.float32
-            and value.requires_grad
-            and value.is_contiguous(memory_format=torch.channels_last)
+        if not getattr(self, _MARKER, False):
+            return original(self, value)
+        checks = (
+            (self.training, 'pool must be in training mode'),
+            (_pair(self.kernel_size) == (3, 3), 'kernel_size must be 3x3'),
+            (_pair(self.stride) == (2, 2), 'stride must be 2x2'),
+            (_pair(self.padding) == (1, 1), 'padding must be 1x1'),
+            (_pair(self.dilation) == (1, 1), 'dilation must be 1x1'),
+            (not self.ceil_mode, 'ceil_mode must be false'),
+            (not self.return_indices, 'return_indices must be false'),
+            (value.ndim == 4, 'input must be four-dimensional'),
+            (value.ndim > 0 and value.shape[0] > 0, 'batch must be nonempty'),
+            (tuple(value.shape[1:]) == (64, 240, 320), 'input C/H/W must be 64/240/320'),
+            (value.numel() < 2**31, 'input must have fewer than 2**31 elements'),
+            (value.is_cuda, 'device must be HCU/CUDA'),
+            (value.dtype == torch.float32, 'dtype must be float32'),
+            (value.requires_grad, 'input must require gradients'),
+            (value.is_contiguous(memory_format=torch.channels_last), 'input must be channels_last'),
         )
-        return _PoolGather.apply(value) if eligible else original(self, value)
+        failures = [reason for valid, reason in checks if not valid]
+        if failures:
+            raise RuntimeError('ACT pool gather unsupported: ' + '; '.join(failures))
+        return _PoolGather.apply(value)
 
     return wrapped

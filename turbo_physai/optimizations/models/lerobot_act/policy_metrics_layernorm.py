@@ -1,25 +1,63 @@
+# Copyright 2024 Tony Z. Zhao and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 # Copyright 2026 Hygon Information Technology Co., Ltd.
-# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-License-Identifier: Apache-2.0 AND BSD-3-Clause
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified by Hygon.
+# ACT policy loss adapted from https://github.com/huggingface/lerobot,
+# src/lerobot/policies/act/modeling_act.py at 3f2179f3b69708b6ad009b2e7685dd9d05269ee1.
+# The original Hygon wrapper portions retain their BSD-3-Clause license.
 """Compose ACT deferred metrics and an experimental scoped LayerNorm path."""
 
-from . import apex_layernorm, reference_training
+import torch.nn.functional as F
+
+from . import apex_layernorm
 
 
-def _switch(options, name, default):
-    value = options.get(name, default)
-    if not isinstance(value, bool):
-        raise ValueError(f"{name} must be a boolean")
-    return value
+def _require_group_options(options):
+    if options:
+        raise ValueError("Enable or disable the whole ACT async scalars Group; individual options are unsupported.")
 
 
-def wrap_policy(original, options):
-    deferred = _switch(options, "deferred_metrics", True)
-    layernorm = _switch(options, "layernorm_apex", False)
-    target = reference_training.act_policy_forward if deferred else original
-    return apex_layernorm.wrap_act_policy(target, {}) if layernorm else target
+def deferred_metrics_policy_forward(self, batch):
+    """Retain the ACT loss calculation but defer scalar reads to logging."""
+    from lerobot.utils.constants import ACTION, OBS_IMAGES
+
+    batch = dict(batch)
+    batch[OBS_IMAGES] = [batch[key] for key in self.config.image_features]
+
+    actions_hat, (mu_hat, log_sigma_x2_hat) = self.model(batch)
+    abs_err = F.l1_loss(batch[ACTION], actions_hat, reduction='none')
+    valid_mask = ~batch['action_is_pad'].unsqueeze(-1)
+    num_valid = valid_mask.sum() * abs_err.shape[-1]
+    l1_loss = (abs_err * valid_mask).sum() / num_valid.clamp_min(1)
+    loss_dict = {'l1_loss': l1_loss.detach()}
+    if self.config.use_vae and log_sigma_x2_hat is not None:
+        mean_kld = (-0.5 * (1 + log_sigma_x2_hat - mu_hat.pow(2) - log_sigma_x2_hat.exp())).sum(-1).mean()
+        loss_dict['kld_loss'] = mean_kld.detach()
+        loss = l1_loss + mean_kld * self.config.kl_weight
+    else:
+        loss = l1_loss
+    return loss, loss_dict
 
 
-def wrap_layer_norm(original, options):
-    _switch(options, "deferred_metrics", True)
-    layernorm = _switch(options, "layernorm_apex", False)
-    return apex_layernorm.wrap_layer_norm(original, {}) if layernorm else original
+def deferred_metrics_policy_wrapper(original, options):
+    del original
+    _require_group_options(options)
+    return apex_layernorm.act_policy_scope_wrapper(deferred_metrics_policy_forward, {})
+
+
+def apex_layernorm_backward_wrapper(original, options):
+    _require_group_options(options)
+    return apex_layernorm.apex_layernorm_backward_wrapper(original, {})

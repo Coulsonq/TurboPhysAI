@@ -78,7 +78,7 @@ def _is_eligible(module, value):
     return torch.autograd.forward_ad.unpack_dual(value).tangent is None
 
 
-def wrap_act_policy(original, options):
+def act_policy_scope_wrapper(original, options):
     del options
     @wraps(original)
     def wrapped(*args, **kwargs):
@@ -90,7 +90,7 @@ def wrap_act_policy(original, options):
     return wrapped
 
 
-def wrap_layer_norm(original, options):
+def apex_layernorm_backward_wrapper(original, options):
     del options
     @wraps(original)
     def wrapped(module, value):

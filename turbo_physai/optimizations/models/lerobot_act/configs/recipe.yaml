@@ -3,7 +3,7 @@
 schema_version: turbophysai/optimization-config/v1
 kind: OptimizationConfig
 metadata:
-  id: model.lerobot_act.reference
+  id: model.lerobot_act.optimized
   version: '1.0.0'
   description: LeRobot ACT optimizations
 model:
@@ -11,36 +11,29 @@ model:
 optimization_modules:
   - turbo_physai.optimizations.models.lerobot_act.catalog
 optimization_groups:
-  - id: lerobot_act.reference_channels_last
+  - id: lerobot_act.channels_last_pool
     enabled: true
-    options:
-      pool_backward_gather: true
-  - id: lerobot_act.reference_backbone_compile
+  - id: lerobot_act.backbone_compile
     enabled: true
-  - id: lerobot_act.reference_no_attn_average
+  - id: lerobot_act.no_attn_average
     enabled: true
-  - id: lerobot_act.reference_ffn_compile
+  - id: lerobot_act.ffn_compile
     enabled: true
-  - id: lerobot_act.reference_attention_probs
+  - id: lerobot_act.attention_softmax_dropout
     enabled: true
     options:
       register_backward: true
-  - id: lerobot_act.reference_ddp
+  - id: lerobot_act.ddp_options
     enabled: true
     options:
       static_graph: true
-  - id: lerobot_act.reference_nonblocking_h2d
+  - id: lerobot_act.nonblocking_h2d
     enabled: true
-  - id: lerobot_act.reference_async_scalars
+  - id: lerobot_act.deferred_metrics_apex_layernorm
     enabled: true
-    options:
-      deferred_metrics: true
-      layernorm_apex: true
   - id: lerobot_act.sampler_vector
     enabled: true
   - id: lerobot_act.vae_no_clone
     enabled: true
   - id: lerobot_act.apex_fused_adamw
-    enabled: true
-  - id: lerobot_act.pool_backward_gather
     enabled: true

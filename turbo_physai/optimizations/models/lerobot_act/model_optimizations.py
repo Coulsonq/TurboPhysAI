@@ -22,7 +22,7 @@
 """Turbo replacements reproducing reference ACT model optimizations.
 
 Each returned wrapper is installed by Turbo on a declared target. There are no
-runtime monkeypatches; markers limit shared PyTorch targets to ACT modules.
+runtime monkeypatches; the input-convolution marker scopes channels-last conversion.
 """
 
 import functools
@@ -30,45 +30,28 @@ import functools
 import torch
 
 
-_BACKBONE_MARKER = '_turbo_act_reference_backbone'
 _CONV_MARKER = '_turbo_act_reference_input_conv'
-_ATTN_MARKER = '_turbo_act_reference_attention'
 
 
-def act_init_wrapper(original, options):
-    mark_pool = options.get('pool_backward_gather', False)
-
-    @functools.wraps(original)
-    def wrapped(self, *args, **kwargs):
-        result = original(self, *args, **kwargs)
-        if hasattr(self, 'backbone') and hasattr(self, 'encoder_img_feat_input_proj'):
-            self.backbone.to(memory_format=torch.channels_last)
-            self.encoder_img_feat_input_proj.to(memory_format=torch.channels_last)
-            first_conv = next(module for module in self.backbone.modules() if isinstance(module, torch.nn.Conv2d))
-            setattr(first_conv, _CONV_MARKER, True)
-        if mark_pool:
-            from .pool_backward_gather import mark_act_pool
-
-            mark_act_pool(self)
-        return result
-
-    return wrapped
-
-
-def policy_init_wrapper(original, options):
+def channels_last_init_wrapper(original, options):
     del options
 
     @functools.wraps(original)
     def wrapped(self, *args, **kwargs):
         result = original(self, *args, **kwargs)
-        if hasattr(self.model, 'backbone'):
-            setattr(self.model.backbone, _BACKBONE_MARKER, True)
+        self.backbone.to(memory_format=torch.channels_last)
+        self.encoder_img_feat_input_proj.to(memory_format=torch.channels_last)
+        first_conv = next(module for module in self.backbone.modules() if isinstance(module, torch.nn.Conv2d))
+        setattr(first_conv, _CONV_MARKER, True)
+        from .pool_backward_gather import mark_act_pool
+
+        mark_act_pool(self)
         return result
 
     return wrapped
 
 
-def conv_forward_wrapper(original, options):
+def channels_last_input_wrapper(original, options):
     del options
 
     @functools.wraps(original)
@@ -80,15 +63,13 @@ def conv_forward_wrapper(original, options):
     return wrapped
 
 
-def backbone_forward_wrapper(original, options):
+def backbone_compile_wrapper(original, options):
     del options
     compiled = None
 
     @functools.wraps(original)
     def wrapped(self, *args, **kwargs):
         nonlocal compiled
-        if not getattr(self, _BACKBONE_MARKER, False):
-            return original(self, *args, **kwargs)
         if compiled is None:
             compiled = torch.compile(original, dynamic=False, options={'triton.cudagraphs': False})
         return compiled(self, *args, **kwargs)
@@ -98,7 +79,7 @@ def backbone_forward_wrapper(original, options):
 
 def _contiguous_tensors(value):
     if isinstance(value, torch.Tensor):
-        return value if value.is_contiguous() else value.contiguous()
+        return value.contiguous()
     if isinstance(value, dict):
         return {key: _contiguous_tensors(item) for key, item in value.items()}
     if isinstance(value, list):
@@ -108,7 +89,7 @@ def _contiguous_tensors(value):
     return value
 
 
-def optimizer_save_wrapper(original, options):
+def contiguous_optimizer_state_wrapper(original, options):
     del options
 
     @functools.wraps(original)
@@ -120,39 +101,12 @@ def optimizer_save_wrapper(original, options):
     return wrapped
 
 
-def encoder_init_wrapper(original, options):
-    del options
-
-    @functools.wraps(original)
-    def wrapped(self, *args, **kwargs):
-        result = original(self, *args, **kwargs)
-        for layer in self.layers:
-            setattr(layer.self_attn, _ATTN_MARKER, True)
-        return result
-
-    return wrapped
-
-
-def decoder_init_wrapper(original, options):
-    del options
-
-    @functools.wraps(original)
-    def wrapped(self, *args, **kwargs):
-        result = original(self, *args, **kwargs)
-        for layer in self.layers:
-            setattr(layer.self_attn, _ATTN_MARKER, True)
-            setattr(layer.multihead_attn, _ATTN_MARKER, True)
-        return result
-
-    return wrapped
-
-
-def attention_forward_wrapper(original, options):
+def attention_no_average_wrapper(original, options):
     del options
 
     @functools.wraps(original)
     def wrapped(self, query, key, value, *args, **kwargs):
-        if getattr(self, _ATTN_MARKER, False) and len(args) < 4 and 'average_attn_weights' not in kwargs:
+        if len(args) < 4 and 'average_attn_weights' not in kwargs:
             kwargs['average_attn_weights'] = False
         return original(self, query, key, value, *args, **kwargs)
 
@@ -163,10 +117,10 @@ def _feed_forward(layer, x):
     return layer.linear2(layer.dropout(layer.activation(layer.linear1(x))))
 
 
-def encoder_ffn_wrapper(original, options):
-    from turbo_physai.optimizations.models.lerobot_act.ffn_compile import select_ffn
+def encoder_ffn_compile_wrapper(original, options):
+    del options
 
-    compiled = select_ffn(_feed_forward, options)
+    compiled = torch.compile(_feed_forward, mode='max-autotune-no-cudagraphs', dynamic=False)
 
     @functools.wraps(original)
     def wrapped(self, x, pos_embed=None, key_padding_mask=None):
@@ -191,10 +145,10 @@ def encoder_ffn_wrapper(original, options):
     return wrapped
 
 
-def decoder_ffn_wrapper(original, options):
-    from turbo_physai.optimizations.models.lerobot_act.ffn_compile import select_ffn
+def decoder_ffn_compile_wrapper(original, options):
+    del options
 
-    compiled = select_ffn(_feed_forward, options)
+    compiled = torch.compile(_feed_forward, mode='max-autotune-no-cudagraphs', dynamic=False)
 
     @functools.wraps(original)
     def wrapped(self, x, encoder_out, decoder_pos_embed=None, encoder_pos_embed=None):
