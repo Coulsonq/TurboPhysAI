@@ -42,11 +42,11 @@ curl -fL --create-dirs \
 安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec：
 
 ```bash
-/usr/bin/python3 -m pip install \
+env -u PYTHONPATH /usr/local/bin/python3 -m pip install \
   -i https://pypi.tuna.tsinghua.edu.cn/simple \
   -r /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt
 
-/usr/bin/python3 -m pip install \
+env -u PYTHONPATH /usr/local/bin/python3 -m pip install \
   --no-deps --no-build-isolation -e /workspace/lerobot
 
 mkdir /workspace/act_ffmpeg4 &&
@@ -62,7 +62,7 @@ printf '%s\n' \
 dpkg-deb -x libavdevice58_4.4.2-0ubuntu0.22.04.1_amd64.deb rootfs &&
 dpkg-deb -x libcdio-paranoia2_10.2+2.0.0-1build3_amd64.deb rootfs &&
 dpkg-deb -x libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb rootfs
-/usr/bin/python3 -m pip install --no-deps \
+env -u PYTHONPATH /usr/local/bin/python3 -m pip install --no-deps \
   --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
 
@@ -75,7 +75,7 @@ dpkg-deb -x libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb rootfs
 ```bash
 HF_ENDPOINT=https://hf-mirror.com \
 HF_HUB_DISABLE_XET=1 \
-python -c 'from huggingface_hub import snapshot_download; snapshot_download(
+env -u PYTHONPATH /usr/local/bin/python3 -c 'from huggingface_hub import snapshot_download; snapshot_download(
     repo_id="lerobot/aloha_mobile_cabinet",
     repo_type="dataset",
     revision="7a752b39f7e69de7e38aee485a6bab07528a061a",
@@ -89,7 +89,7 @@ python -c 'from huggingface_hub import snapshot_download; snapshot_download(
 
 ```bash
 TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
-  python -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(check_hash=True)'
+  env -u PYTHONPATH /usr/local/bin/python3 -c 'from torchvision.models import ResNet18_Weights; ResNet18_Weights.IMAGENET1K_V1.get_state_dict(check_hash=True)'
 ```
 
 ## 6. 运行训练
@@ -108,11 +108,11 @@ BATCH_SIZE=86
 env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
   LD_LIBRARY_PATH="/workspace/act_ffmpeg4/rootfs/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
-  turbo-physai run \
+  /usr/local/bin/python3 -m turbo_physai.cli run \
     --model lerobot_act \
     --log-report \
     -- \
-    torchrun --standalone --nnodes=1 --nproc_per_node="${GPU_COUNT}" \
+    /usr/local/bin/python3 -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node="${GPU_COUNT}" \
       -m lerobot.scripts.lerobot_train \
       --policy.type=act \
       --policy.device=cuda \
