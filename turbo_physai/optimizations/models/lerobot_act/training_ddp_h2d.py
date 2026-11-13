@@ -55,5 +55,3 @@ def nonblocking_h2d_wrapper(original, options):
         return original(*bound.args, **bound.kwargs)
 
     return wrapped
-
-
