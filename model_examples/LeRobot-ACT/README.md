@@ -18,7 +18,7 @@ TurboPhysAI 的 ACT 优化基于 LeRobot commit `3f2179f3b69708b6ad009b2e7685dd9
 
 ### 4.1 拉取官方源码
 
-拉取 LeRobot 官方源码。
+拉取 LeRobot 官方源码：
 
 ```bash
 cd /workspace &&
@@ -39,7 +39,7 @@ curl -fL --create-dirs \
   -o /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt
 ```
 
-安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec。
+安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec：
 
 ```bash
 /usr/bin/python3 -m pip install \
