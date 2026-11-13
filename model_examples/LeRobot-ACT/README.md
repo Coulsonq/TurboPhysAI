@@ -39,7 +39,7 @@ curl -fL --create-dirs \
   -o /workspace/TurboPhysAI/model_examples/LeRobot-ACT/requirements.txt
 ```
 
-安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库，再安装 torchcodec：
+安装 [requirements.txt](requirements.txt) 中的依赖和 LeRobot 源码，准备 FFmpeg 运行库：
 
 ```bash
 env -u PYTHONPATH /usr/local/bin/python3 -m pip install \
@@ -62,8 +62,6 @@ printf '%s\n' \
 dpkg-deb -x libavdevice58_4.4.2-0ubuntu0.22.04.1_amd64.deb rootfs &&
 dpkg-deb -x libcdio-paranoia2_10.2+2.0.0-1build3_amd64.deb rootfs &&
 dpkg-deb -x libcdio-cdda2_10.2+2.0.0-1build3_amd64.deb rootfs
-env -u PYTHONPATH /usr/local/bin/python3 -m pip install --no-deps \
-  --index-url https://download.pytorch.org/whl/cpu 'torchcodec==0.12.0+cpu'
 ```
 
 ## 5. 下载数据和权重
