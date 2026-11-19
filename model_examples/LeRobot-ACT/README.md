@@ -88,7 +88,7 @@ TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch \
 
 Turbo 训练使用 8 卡、每卡 batch size 86、8 个 worker、prefetch factor 2，运行 100000 步。
 
-需安装包含 ACT 优化的 TurboPhysAI 版本；`--model lerobot_act` 使用该安装包内的优化和运行时配置。请确保 `turbo-physai` 和 `torchrun` 属于同一 Python 3.12 环境。
+需安装包含 ACT 优化的 TurboPhysAI 版本；请确保 `turbo-physai` 和 `torchrun` 属于同一 Python 3.12 环境。
 
 ```bash
 cd /workspace/lerobot
@@ -100,7 +100,8 @@ BATCH_SIZE=86
 env -u PYTHONPATH HIP_VISIBLE_DEVICES="${GPU_IDS}" \
   TORCH_HOME=/workspace/act_assets/ckpt/LeRobot-ACT/torch HF_HUB_OFFLINE=1 \
   turbo-physai run \
-    --model lerobot_act \
+    --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/optimization.yaml \
+    --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/lerobot_act/configs/runtime.yaml \
     --log-report \
     -- \
     torchrun --standalone --nnodes=1 --nproc_per_node="${GPU_COUNT}" \
