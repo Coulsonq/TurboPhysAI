@@ -57,7 +57,8 @@ cd /workspace
   huggingface_hub==0.36.0 transformers==4.57.1 accelerate==1.14.0 \
   av==18.0.0 hydra-core==1.3.4 hydra-colorlog==1.2.0 \
   mediapy==1.2.7 physical-ai-av==0.2.2 torchmetrics==1.8.2 \
-  opencv-python==5.0.0.93 rich==15.0.0 wandb==0.28.1 pytest==8.4.2
+  opencv-python==5.0.0.93 rich==15.0.0 wandb==0.28.1 pytest==8.4.2 \
+  ninja wheel 'setuptools<81'
 
 DS_BUILD_OPS=0 /usr/local/bin/python3 -m pip install --no-build-isolation deepspeed==0.19.1
 
