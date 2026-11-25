@@ -81,16 +81,50 @@ git clone --branch alpamayo2 --single-branch \
 
 ## 5. 数据集与权重
 
-容器内使用以下已挂载路径：
+模型权重和数据集需要 Hugging Face 访问权限。请先在[模型页面](https://huggingface.co/nvidia/Alpamayo2-Super)和[数据集页面](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles)阅读并确认许可条款，并按页面要求申请访问权限。然后在容器内登录：
+
+```bash
+hf auth login
+hf auth whoami
+```
+
+登录时按提示输入 Hugging Face 访问令牌，不要将令牌写入命令、日志或文档。
+
+### 5.1 下载模型权重
+
+按照 [NVIDIA 官方说明](https://github.com/NVlabs/alpamayo-recipes/blob/622f9d23ff9e4961ba8c6aac71367776cdf6b016/recipes/alpamayo2_sft/README.md#model-access)，下载完整模型快照：
 
 ```bash
 export MODEL_DIR=/workspace/alpamayo2-super
-export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
+huggingface-cli download nvidia/Alpamayo2-Super --local-dir "$MODEL_DIR"
 ```
 
-`MODEL_DIR` 是完整的 `nvidia/Alpamayo2-Super` 权重快照。当前 `PAI_DIR` 仅包含 7 路相机的 chunk 0，适用于短测；**不包含官方完整 Stage 1 配方所需的全部数据**。正式命令使用训练集 chunk 0–98、验证集 chunk 99；需先按[官方数据准备说明](https://github.com/NVlabs/alpamayo-recipes/blob/622f9d23ff9e4961ba8c6aac71367776cdf6b016/recipes/alpamayo2_sft/README.md#prepare-pai-chunks-099)准备 chunk 0–99。训练和验证区间为左闭右开：`0-99` 不包含 99，`99-100` 只包含 99。
+下载目录应包含模型配置、tokenizer、processor 文件和全部权重分片。
 
-模型和数据集受访问许可约束，使用前请确认 [模型许可](https://huggingface.co/nvidia/Alpamayo2-Super)和[数据集许可](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles)适用于实际场景。不要将访问令牌写入命令、日志或文档。
+### 5.2 下载数据集
+
+按照 [NVIDIA 官方数据准备说明](https://github.com/NVlabs/alpamayo-recipes/blob/622f9d23ff9e4961ba8c6aac71367776cdf6b016/recipes/alpamayo2_sft/README.md#prepare-pai-chunks-099)，下载完整 Stage 1 使用的 7 路相机、标定和 egomotion 数据：
+
+```bash
+export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
+cd /workspace/alpamayo-recipes
+
+/usr/local/bin/python3 scripts/download_pai.py \
+  --chunk-ids 0-100 \
+  --camera \
+    camera_cross_left_120fov \
+    camera_front_wide_120fov \
+    camera_cross_right_120fov \
+    camera_rear_left_70fov \
+    camera_rear_tele_30fov \
+    camera_rear_right_70fov \
+    camera_front_tele_30fov \
+  --calibration camera_intrinsics sensor_extrinsics \
+  --labels egomotion \
+  --output-dir "$PAI_DIR"
+```
+
+chunk 范围为左闭右开：`0-100` 下载 chunk 0–99，后续训练使用 `0-99`（chunk 0–98），验证使用 `99-100`（chunk 99）。完整数据量较大，下载前请确认有足够的存储空间。仅做第 7 节调试时，可将下载范围改为 `0-1`，只下载 chunk 0，但不能用于第 6 节的完整数据配置。
 
 ## 6. 单节点八卡 Stage 1 训练
 
