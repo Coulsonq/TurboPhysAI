@@ -59,5 +59,17 @@ optimization_groups:
     ast_hashes:
       transformers.integrations.deepspeed.HfTrainerDeepSpeedConfig.__init__:
       - ast-v1:5c8a79f77bb7ec9e893d07cc8b07ea88e32365a58954f8c64768b8e165a17b88
+- id: alpamayo2.apex_fused_adamw
+  enabled: false
+  options: {}
+  trust: {}
+- id: alpamayo2.channels_last_vision
+  enabled: false
+  options: {}
+  trust: {}
+- id: alpamayo2.module_compile
+  enabled: false
+  options: {}
+  trust: {}
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog
