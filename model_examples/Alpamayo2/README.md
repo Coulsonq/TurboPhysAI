@@ -35,7 +35,7 @@ docker run -dit \
 docker exec -it "$CONTAINER_NAME" bash
 ```
 
-上面的 `--privileged` 等设置与安装指南一致，会赋予容器较高的宿主机权限，仅应在可信环境使用。`/workspace` 映射到宿主机的 `/public/home/cuiqi/alpamayo2`，容器内创建的源码、虚拟环境、日志及输出也会保存在该目录。
+上面的 `--privileged` 等设置与安装指南一致，会赋予容器较高的宿主机权限，仅应在可信环境使用。`/workspace` 映射到宿主机的 `/public/home/cuiqi/alpamayo2`，容器内创建的源码、日志及输出也会保存在该目录。
 
 ## 2. 获取模型源码
 
@@ -53,22 +53,19 @@ git -C /workspace/alpamayo2 checkout --detach 9596749e33552468f3ae70da8c237bdd04
 
 ## 3. 安装训练环境
 
-基础镜像提供 Python 3.12、DTK 26.10 和海光 PyTorch 2.13。创建继承镜像软件包的虚拟环境，保留海光 PyTorch；不要直接执行可能安装 CUDA 版 PyTorch 的官方 `uv sync`。
+基础镜像提供 Python 3.12、DTK 26.10 和海光 PyTorch 2.13。直接使用容器内的 `/usr/local/bin/python3` 安装依赖；不要直接执行可能安装 CUDA 版 PyTorch 的官方 `uv sync`。安装会改变当前容器中该 Python 环境的包，不会修改基础镜像。
 
 ```bash
 cd /workspace
-/usr/local/bin/python3 -m venv --system-site-packages /workspace/venv
-source /workspace/venv/bin/activate
-
-python -m pip install \
+/usr/local/bin/python3 -m pip install \
   huggingface_hub==0.36.0 transformers==4.57.1 accelerate==1.14.0 \
   av==18.0.0 hydra-core==1.3.4 hydra-colorlog==1.2.0 \
   mediapy==1.2.7 physical-ai-av==0.2.2 torchmetrics==1.8.2 \
   opencv-python==5.0.0.93 rich==15.0.0 wandb==0.28.1 pytest==8.4.2
 
-DS_BUILD_OPS=0 python -m pip install --no-build-isolation deepspeed==0.19.1
+DS_BUILD_OPS=0 /usr/local/bin/python3 -m pip install --no-build-isolation deepspeed==0.19.1
 
-python -m pip install --no-deps -e /workspace/alpamayo2 \
+/usr/local/bin/python3 -m pip install --no-deps -e /workspace/alpamayo2 \
   -e /workspace/alpamayo-recipes/src \
   -e /workspace/alpamayo-recipes/recipes/alpamayo2_sft
 ```
@@ -77,16 +74,16 @@ python -m pip install --no-deps -e /workspace/alpamayo2 \
 
 ## 4. 获取并安装 TurboPhysAI
 
-在上一步创建的虚拟环境中执行：
+继续使用容器内的 `/usr/local/bin/python3` 执行：
 
 ```bash
 cd /workspace
 git clone --branch alpamayo2 --single-branch https://github.com/Coulsonq/TurboPhysAI.git /workspace/TurboPhysAI
-python -m pip install -r /workspace/TurboPhysAI/requirements.txt
-python -m pip install ninja wheel 'setuptools<81'
+/usr/local/bin/python3 -m pip install -r /workspace/TurboPhysAI/requirements.txt
+/usr/local/bin/python3 -m pip install ninja wheel 'setuptools<81'
 cd /workspace/TurboPhysAI
-MAX_JOBS=8 python setup.py bdist_wheel
-python -m pip install --no-deps dist/turbo_physai-*.whl
+MAX_JOBS=8 /usr/local/bin/python3 setup.py bdist_wheel
+/usr/local/bin/python3 -m pip install --no-deps dist/turbo_physai-*.whl
 ```
 
 `alpamayo2` 是开发分支，并非 TurboPhysAI 正式发布版本。请记录 `git -C /workspace/TurboPhysAI rev-parse HEAD` 的输出，以便复现。TurboPhysAI 通过 wheel 安装，源码更新后需要重新构建并安装。上述完整安装流程尚需在新容器中验证。
@@ -94,9 +91,10 @@ python -m pip install --no-deps dist/turbo_physai-*.whl
 检查安装来源和设备：
 
 ```bash
-python -c 'import torch, deepspeed, turbo_physai; print("torch:", torch.__version__, "HIP:", torch.version.hip, "DeepSpeed:", deepspeed.__version__); print("HCU count:", torch.cuda.device_count()); print("TurboPhysAI:", turbo_physai.__file__)'
-python -c 'import turbo_physai._C; print(turbo_physai._C.__file__)'
-turbo-physai --help
+/usr/local/bin/python3 -c 'import torch, deepspeed, turbo_physai; print("torch:", torch.__version__, "HIP:", torch.version.hip, "DeepSpeed:", deepspeed.__version__); print("HCU count:", torch.cuda.device_count()); print("TurboPhysAI:", turbo_physai.__file__)'
+/usr/local/bin/python3 -c 'import turbo_physai._C; print(turbo_physai._C.__file__)'
+head -n 1 /usr/local/bin/turbo-physai /usr/local/bin/torchrun
+/usr/local/bin/turbo-physai --help
 ```
 
 ## 5. 数据集与权重
@@ -119,7 +117,6 @@ export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 TurboPhysAI 的 `flash_attention` 和 `non_blocking_h2d` 改变执行方式；为保留官方每卡 4 个数据加载 worker，命令中关闭了将 worker 改为 2 的 `spawn_dataloader` 优化组。优化组已在不同的 5-step 实验配置中做过吞吐验证，但本节官方完整配置及其精度尚未验证。
 
 ```bash
-source /workspace/venv/bin/activate
 # 模型权重目录与数据集目录
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
@@ -137,12 +134,12 @@ mkdir -p /workspace/logs /workspace/outputs
 STAMP="$(date +%Y%m%d_%H%M%S)"
 set -o pipefail
 
-turbo-physai run \
+/usr/local/bin/turbo-physai run \
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
   --disable-group alpamayo2.spawn_dataloader \
   -- \
-  torchrun \
+  /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=8 \
     -m alpamayo2_sft.train_hf \
     --config-path pkg://alpamayo2_sft/configs \
@@ -169,7 +166,6 @@ turbo-physai run \
 如需使用官方的八卡调试卡数，将下面的 `HIP_VISIBLE_DEVICES` 改为 `0,1,2,3,4,5,6,7`，并将 `--nproc_per_node` 改为 `8`。
 
 ```bash
-source /workspace/venv/bin/activate
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 # 每个训练进程的数据加载 worker 数，官方单节点调试默认为 0
@@ -186,12 +182,12 @@ mkdir -p /workspace/logs /workspace/outputs
 STAMP="$(date +%Y%m%d_%H%M%S)"
 set -o pipefail
 
-turbo-physai run \
+/usr/local/bin/turbo-physai run \
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
   --disable-group alpamayo2.spawn_dataloader \
   -- \
-  torchrun \
+  /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=1 \
     -m alpamayo2_sft.train_hf \
     --config-path pkg://alpamayo2_sft/configs \
