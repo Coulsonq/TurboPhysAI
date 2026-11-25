@@ -62,9 +62,9 @@ cd /workspace
 
 source /opt/dtk/env.sh
 git clone --branch v0.19.7-dev --depth 1 \
-  https://github.com/HYGON-AI/Deepspeed-das.git /workspace/Deepspeed-das-alpamayo-20261125
+  https://github.com/HYGON-AI/Deepspeed-das.git /workspace/Deepspeed-das
 /usr/local/bin/python3 -m pip install --no-deps hjson msgpack py-cpuinfo
-cd /workspace/Deepspeed-das-alpamayo-20261125
+cd /workspace/Deepspeed-das
 /usr/local/bin/python3 -m pip install --no-deps --no-build-isolation .
 
 /usr/local/bin/python3 -m pip install --no-deps -e /workspace/alpamayo2 \
