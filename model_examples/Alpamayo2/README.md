@@ -134,7 +134,8 @@ STAMP="$(date +%Y%m%d_%H%M%S)"
 set -o pipefail
 
 turbo-physai run \
-  --model alpamayo2 \
+  --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
+  --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
   --disable-group alpamayo2.spawn_dataloader \
   -- \
   torchrun \
