@@ -120,8 +120,11 @@ TurboPhysAI 的 `flash_attention` 和 `non_blocking_h2d` 改变执行方式；�
 
 ```bash
 source /workspace/venv/bin/activate
+# 模型权重目录与数据集目录
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
+# 每个训练进程的数据加载 worker 数
+NUM_WORKERS=4
 export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
 
@@ -144,18 +147,19 @@ turbo-physai run \
     data.train_dataset.chunk_ids="0-99" \
     data.val_dataset.local_dir="$PAI_DIR" \
     data.val_dataset.chunk_ids="99-100" \
+    trainer.dataloader_num_workers="$NUM_WORKERS" \
     paths.output_dir="/workspace/outputs/alpamayo2-stage1-${STAMP}" \
     +trainer.save_strategy=no \
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-${STAMP}.log"
 ```
 
-`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
+根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；通过 `NUM_WORKERS` 调整每个训练进程的数据加载 worker 数，默认 4，八卡合计 32 个。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
 ## 7. 优化项
 
 | 优化组 | 作用 | 第 6 节命令 |
 | --- | --- | --- |
-| `alpamayo2.spawn_dataloader` | 每个 rank 使用 2 个 spawn 数据加载 worker | 关闭，保留官方的 4 个 worker |
+| `alpamayo2.spawn_dataloader` | 每个 rank 使用 2 个 spawn 数据加载 worker | 关闭，使用命令中的 `NUM_WORKERS` |
 | `alpamayo2.flash_attention` | 使用 FlashAttention 2 | 开启 |
 | `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
 
