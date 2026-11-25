@@ -153,7 +153,6 @@ set -o pipefail
 /usr/local/bin/turbo-physai run \
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
-  --disable-group alpamayo2.spawn_dataloader \
   -- \
   /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=8 \
@@ -206,7 +205,6 @@ set -o pipefail
 /usr/local/bin/turbo-physai run \
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
-  --disable-group alpamayo2.spawn_dataloader \
   -- \
   /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=1 \
