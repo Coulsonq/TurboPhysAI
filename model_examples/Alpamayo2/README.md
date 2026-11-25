@@ -77,25 +77,13 @@ DS_BUILD_OPS=0 /usr/local/bin/python3 -m pip install --no-build-isolation deepsp
 继续使用容器内的 `/usr/local/bin/python3` 执行：
 
 ```bash
-cd /workspace
-git clone --branch alpamayo2 --single-branch https://github.com/Coulsonq/TurboPhysAI.git /workspace/TurboPhysAI
-/usr/local/bin/python3 -m pip install -r /workspace/TurboPhysAI/requirements.txt
-/usr/local/bin/python3 -m pip install ninja wheel 'setuptools<81'
-cd /workspace/TurboPhysAI
-MAX_JOBS=8 /usr/local/bin/python3 setup.py bdist_wheel
-/usr/local/bin/python3 -m pip install --no-deps dist/turbo_physai-*.whl
+git clone --branch alpamayo2 --single-branch \
+  https://github.com/Coulsonq/TurboPhysAI.git /workspace/TurboPhysAI
+
+/usr/local/bin/python3 -m pip install --no-build-isolation /workspace/TurboPhysAI
 ```
 
-`alpamayo2` 是开发分支，并非 TurboPhysAI 正式发布版本。请记录 `git -C /workspace/TurboPhysAI rev-parse HEAD` 的输出，以便复现。TurboPhysAI 通过 wheel 安装，源码更新后需要重新构建并安装。上述完整安装流程尚需在新容器中验证。
-
-检查安装来源和设备：
-
-```bash
-/usr/local/bin/python3 -c 'import torch, deepspeed, turbo_physai; print("torch:", torch.__version__, "HIP:", torch.version.hip, "DeepSpeed:", deepspeed.__version__); print("HCU count:", torch.cuda.device_count()); print("TurboPhysAI:", turbo_physai.__file__)'
-/usr/local/bin/python3 -c 'import turbo_physai._C; print(turbo_physai._C.__file__)'
-head -n 1 /usr/local/bin/turbo-physai /usr/local/bin/torchrun
-/usr/local/bin/turbo-physai --help
-```
+`alpamayo2` 是开发分支，并非正式发布版本。安装需要当前环境已具备海光 PyTorch、编译工具及兼容的构建依赖；还需确认 Pillow 满足模型要求。源码更新后需重新安装。该精简安装流程尚未在新容器中验证。
 
 ## 5. 数据集与权重
 
