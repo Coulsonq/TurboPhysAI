@@ -4,20 +4,20 @@
   "model_commit": "622f9d23ff9e4961ba8c6aac71367776cdf6b016",
   "config": {
     "path": "optimization.yaml",
-    "sha256": "9d46c3e38980a3bcc90f7f3e3d9dd70ff823432dbdf917bcb9ef95a5a23c09b7"
+    "sha256": "7246482762fae2bf8bcf2c071d12a42c1d289a2d5c4e8ae292db6aecf20e9191"
   },
   "inputs": [
     {
       "role": "recipe",
       "base": "package",
       "path": "optimizations/models/alpamayo2/configs/recipe.yaml",
-      "sha256": "3fad67387fe412a779c5a0c779e70a010b0e9bff102e7c76536310f1a5fd2071"
+      "sha256": "e290827e5c0e152b757fbc80fe4f5a3b87b80ec1d64c4fefe4e2f1bbdcca7155"
     },
     {
       "role": "catalog",
       "base": "package",
       "path": "optimizations/models/alpamayo2/catalog.py",
-      "sha256": "ca97afcb3c9c0424f04ab332c8bb39cf2faeaeb1ae9c66dfddc0af5aa59d4b6c"
+      "sha256": "da4bfa359d04fe0ee04595ad11480a6fffa095a35c2f3580807b5d7ae7aa5214"
     }
   ]
 }

@@ -1,17 +1,21 @@
 # Copyright 2026 Hygon Information Technology Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Use spawned workers for the Alpamayo training DataLoader."""
+"""Configure Alpamayo training workers and PyTorch CPU threads."""
 
 import os
-import inspect
 from functools import wraps
 
 
+def _positive_integer(options, name, default):
+    value = options.get(name, default)
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
 def train_dataloader_wrapper(original, options):
-    workers = options.get("num_workers", 2)
-    if not isinstance(workers, int) or isinstance(workers, bool) or workers <= 0:
-        raise ValueError("num_workers must be a positive integer")
+    workers = _positive_integer(options, "num_workers", 2)
 
     @wraps(original)
     def wrapped(trainer, *args, **kwargs):
@@ -25,14 +29,15 @@ def train_dataloader_wrapper(original, options):
     return wrapped
 
 
-def dataloader_wrapper(original, options):
-    class SpawnDataLoader(original):
-        def __init__(self, *args, **kwargs):
-            if kwargs.get("worker_init_fn") is not None:
-                kwargs["multiprocessing_context"] = "spawn"
-            super().__init__(*args, **kwargs)
-            if kwargs.get("worker_init_fn") is not None and os.environ.get("RANK", "0") == "0":
-                print(f"TURBO_ALPAMAYO_DATALOADER workers={self.num_workers} context=spawn", flush=True)
+def omp_threads_wrapper(original, options):
+    threads = _positive_integer(options, "omp_num_threads", 4)
 
-    SpawnDataLoader.__signature__ = inspect.signature(original)
-    return SpawnDataLoader
+    @wraps(original)
+    def wrapped(training_args, *args, **kwargs):
+        import torch
+
+        os.environ["OMP_NUM_THREADS"] = str(threads)
+        torch.set_num_threads(threads)
+        return original(training_args, *args, **kwargs)
+
+    return wrapped

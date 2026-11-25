@@ -6,15 +6,15 @@
 from turbo_physai.engine.definitions import group, wrap
 
 
-SPAWN_DATALOADER = group(
-    "alpamayo2.spawn_dataloader",
+DATALOADER_WORKERS_OMP = group(
+    "alpamayo2.dataloader_workers_omp",
     wrap(
         target="alpamayo2_sft.trainer.Alpamayo2SuperTrainer.get_train_dataloader",
         replacement="turbo_physai.optimizations.models.alpamayo2.dataloader.train_dataloader_wrapper",
     ),
     wrap(
-        target="transformers.trainer.DataLoader",
-        replacement="turbo_physai.optimizations.models.alpamayo2.dataloader.dataloader_wrapper",
+        target="alpamayo2_sft.trainer.TrainingArguments.__post_init__",
+        replacement="turbo_physai.optimizations.models.alpamayo2.dataloader.omp_threads_wrapper",
     ),
 )
 
@@ -31,5 +31,13 @@ NON_BLOCKING_H2D = group(
     wrap(
         target="transformers.trainer.Trainer.create_accelerator_and_postprocess",
         replacement="turbo_physai.optimizations.models.alpamayo2.non_blocking.non_blocking_wrapper",
+    ),
+)
+
+DISABLE_CPU_OFFLOAD = group(
+    "alpamayo2.disable_cpu_offload",
+    wrap(
+        target="transformers.integrations.deepspeed.HfTrainerDeepSpeedConfig.__init__",
+        replacement="turbo_physai.optimizations.models.alpamayo2.cpu_offload.disable_cpu_offload_wrapper",
     ),
 )

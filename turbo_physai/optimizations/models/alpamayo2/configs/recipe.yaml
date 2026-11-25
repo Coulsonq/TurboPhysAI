@@ -14,11 +14,14 @@ optimization_modules:
 extends: []
 compatibility: {}
 optimization_groups:
-  - id: alpamayo2.spawn_dataloader
+  - id: alpamayo2.dataloader_workers_omp
     enabled: true
     options:
       num_workers: 2
+      omp_num_threads: 4
   - id: alpamayo2.flash_attention
     enabled: true
   - id: alpamayo2.non_blocking_h2d
+    enabled: true
+  - id: alpamayo2.disable_cpu_offload
     enabled: true

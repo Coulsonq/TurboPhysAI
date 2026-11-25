@@ -135,7 +135,7 @@ cd /workspace/alpamayo-recipes
 | 配置 | 节点 / 卡数 | 相机 / 帧数 | 精度 | 每卡 batch size | 梯度累积 | 每进程 worker | 重计算 | DeepSpeed | 训练步数 | checkpoint |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 官方配置 | 4 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 默认保存 |
-| 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 1 | 4 | 开启 | ZeRO-3 | 100000 | 不保存 |
+| 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 1 | 2 | 开启 | ZeRO-3 | 100000 | 不保存 |
 
 训练和验证均使用 chunk 0，样本是否重叠取决于数据集划分；此配置用于调试，不能代表完整数据集训练或独立验证。
 
@@ -143,7 +143,7 @@ cd /workspace/alpamayo-recipes
 # 模型权重目录与数据集目录
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
-# 每个训练进程的数据加载 worker 数，官方完整训练默认为 4
+# 关闭 worker/OMP 优化组时使用的 worker 数，官方完整训练默认为 4
 NUM_WORKERS=4
 # 梯度累积次数，官方完整训练默认为 16
 GRADIENT_ACCUMULATION_STEPS=1
@@ -161,6 +161,7 @@ set -o pipefail
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
   --log-report \
+  --disable-group alpamayo2.disable_cpu_offload \
   -- \
   /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=8 \
@@ -180,7 +181,7 @@ set -o pipefail
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-${STAMP}.log"
 ```
 
-根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；通过 `NUM_WORKERS` 调整每个训练进程的数据加载 worker 数，通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
+根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；默认启用 worker/OMP 优化组，使用每个 rank 2 个 worker 和 4 个 PyTorch CPU 线程；关闭该组后通过 `NUM_WORKERS` 调整 worker 数。通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
 ## 7. 单卡 Stage 1 调试实验
 
@@ -214,6 +215,7 @@ set -o pipefail
   --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
   --log-report \
+  --disable-group alpamayo2.dataloader_workers_omp,alpamayo2.disable_cpu_offload \
   -- \
   /usr/local/bin/torchrun \
     --standalone --nnodes=1 --nproc_per_node=1 \
@@ -239,7 +241,7 @@ set -o pipefail
 | 相机 / 帧 | 7 路 / 每路 4 帧 | 同官方完整配置 | 1 路 / 1 帧 | 同官方调试配置 |
 | 数据 chunk | 训练 0–98；验证 99 | 训练和验证均为 0 | 训练和验证均为 0 | 同官方调试配置 |
 | 每卡 batch / 梯度累积 | 1 / 16 | 1 / 1 | 1 / 1 | 1 / 1 |
-| 每进程 worker | 4 | 默认 4，可通过 `NUM_WORKERS` 调整 | 0 | 默认 0，可通过 `NUM_WORKERS` 调整 |
+| 每进程 worker | 4 | 默认 2；关闭 worker/OMP 组后可通过 `NUM_WORKERS` 调整 | 0 | 默认 0，可通过 `NUM_WORKERS` 调整 |
 | 训练步数 | 100000 | 100000 | 2 | 2 |
 | DeepSpeed | ZeRO-3 | ZeRO-3 | ZeRO-3，优化器 CPU offload | 同官方调试配置 |
 | checkpoint | 默认保存，每 500 步 | 不保存 | 不保存 | 不保存 |
@@ -250,8 +252,13 @@ set -o pipefail
 
 | 优化组 | 作用 | 第 6 节命令 |
 | --- | --- | --- |
-| `alpamayo2.spawn_dataloader` | 每个 rank 使用 2 个 spawn 数据加载 worker | 关闭，使用命令中的 `NUM_WORKERS` |
+| `alpamayo2.dataloader_workers_omp` | 每个 rank 使用 2 个 DataLoader worker，设置 PyTorch CPU 线程数及 `OMP_NUM_THREADS` 为 4；保留原有进程启动方式 | 开启 |
 | `alpamayo2.flash_attention` | 使用 FlashAttention 2 | 开启 |
 | `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
+| `alpamayo2.disable_cpu_offload` | 将 DeepSpeed 配置中已有的 CPU 优化器和参数 offload 关闭 | 关闭 |
 
-上述优化是在特定镜像、数据子集、BS=1、梯度累积 1 及优化器 CPU offload 条件下做的 5-step 吞吐实验；不等同于本节完整配置的性能或精度验证。需要启用 2-worker 优化时，可移除第 6 节命令中的 `--disable-group alpamayo2.spawn_dataloader`，但此时数据加载配置不再与官方默认一致。
+关闭 worker/OMP 组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.dataloader_workers_omp`。组开启后在训练参数初始化时设置线程数：PyTorch OpenMP 的线程数会调整；已初始化的其他第三方 OpenMP 库不一定受环境变量变更影响。
+
+CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；第 6 节命令通过 `--disable-group` 关闭该组，移除该参数即可启用该组。官方 `sft_stage1` 默认的 `configs/deepspeed/zero3.json` 本身没有 CPU offload，因此开启此组不会改变默认配置。若需要比较，可在训练参数中加 `trainer.deepspeed=configs/deepspeed/zero3_optimizer_offload.json`，关闭优化组保留 CPU offload，开启优化组关闭它；关闭 offload 会增加显存占用。
+
+以上新增或调整的优化组尚未完成八卡训练、性能及 loss 验证。

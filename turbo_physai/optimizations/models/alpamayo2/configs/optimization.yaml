@@ -13,21 +13,22 @@ compatibility:
   commits:
   - 622f9d23ff9e4961ba8c6aac71367776cdf6b016
 optimization_groups:
-- id: alpamayo2.spawn_dataloader
+- id: alpamayo2.dataloader_workers_omp
   enabled: true
   options:
     num_workers: 2
+    omp_num_threads: 4
   trust:
     source_hashes:
       alpamayo2_sft.trainer.Alpamayo2SuperTrainer.get_train_dataloader:
       - source-v1:205a99685f8facd98a273c284296c1dc5b6a598499afbfaefd5dc1d363425771
-      transformers.trainer.DataLoader:
-      - source-v1:29c6b79c9a75b05f660068a0c78909adff4884ea272b517521655908af3d471a
+      alpamayo2_sft.trainer.TrainingArguments.__post_init__:
+      - source-v1:0c86eb7d4096e88a9a093249dbc171e7a269d1b27677ae548e69654416070e54
     ast_hashes:
       alpamayo2_sft.trainer.Alpamayo2SuperTrainer.get_train_dataloader:
       - ast-v1:7805bc7c935e564788910bc724271ccf73ad231f2313e5bb6e89d0de16251919
-      transformers.trainer.DataLoader:
-      - ast-v1:275d616c192dd913fab3d8e5fffbe702d44305d95c3bf113c7051989411176bf
+      alpamayo2_sft.trainer.TrainingArguments.__post_init__:
+      - ast-v1:40382fde9bf2f76f67f354049ca62b29055b6b848c8e9b9f9f0bd23e67f0b63c
 - id: alpamayo2.flash_attention
   enabled: true
   options: {}
@@ -48,5 +49,15 @@ optimization_groups:
     ast_hashes:
       transformers.trainer.Trainer.create_accelerator_and_postprocess:
       - ast-v1:7b234d4a01131cf8a035575276c276fd68c5032f38ff1d8f8a600634ed5f4e79
+- id: alpamayo2.disable_cpu_offload
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      transformers.integrations.deepspeed.HfTrainerDeepSpeedConfig.__init__:
+      - source-v1:4ffba25da8d77cd496b533649ef9abf29d7e698c7df82361310ddf79fcb3bc83
+    ast_hashes:
+      transformers.integrations.deepspeed.HfTrainerDeepSpeedConfig.__init__:
+      - ast-v1:5c8a79f77bb7ec9e893d07cc8b07ea88e32365a58954f8c64768b8e165a17b88
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog
