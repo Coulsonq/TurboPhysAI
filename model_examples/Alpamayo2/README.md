@@ -109,14 +109,14 @@ huggingface-cli download nvidia/Alpamayo2-Super --local-dir "$MODEL_DIR"
 
 ### 5.2 下载数据集
 
-按照 [NVIDIA 官方数据准备说明](https://github.com/NVlabs/alpamayo-recipes/blob/622f9d23ff9e4961ba8c6aac71367776cdf6b016/recipes/alpamayo2_sft/README.md#prepare-pai-chunks-099)，下载完整 Stage 1 使用的 7 路相机、标定和 egomotion 数据：
+参考 [NVIDIA 官方数据准备说明](https://github.com/NVlabs/alpamayo-recipes/blob/622f9d23ff9e4961ba8c6aac71367776cdf6b016/recipes/alpamayo2_sft/README.md#prepare-pai-chunks-099)，下载 chunk 0 的 7 路相机、标定和 egomotion 数据：
 
 ```bash
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 cd /workspace/alpamayo-recipes
 
 /usr/local/bin/python3 scripts/download_pai.py \
-  --chunk-ids 0-100 \
+  --chunk-ids 0-1 \
   --camera \
     camera_cross_left_120fov \
     camera_front_wide_120fov \
@@ -136,6 +136,8 @@ cd /workspace/alpamayo-recipes
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 官方配置 | 4 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 默认保存 |
 | 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 1 | 4 | 开启 | ZeRO-3 | 100000 | 不保存 |
+
+训练和验证均使用 chunk 0，样本是否重叠取决于数据集划分；此配置用于调试，不能代表完整数据集训练或独立验证。
 
 ```bash
 # 模型权重目录与数据集目录
@@ -167,9 +169,9 @@ set -o pipefail
     --config-name sft_stage1 \
     model.pretrained_model_name_or_path="$MODEL_DIR" \
     data.train_dataset.local_dir="$PAI_DIR" \
-    data.train_dataset.chunk_ids="0-99" \
+    data.train_dataset.chunk_ids="0-1" \
     data.val_dataset.local_dir="$PAI_DIR" \
-    data.val_dataset.chunk_ids="99-100" \
+    data.val_dataset.chunk_ids="0-1" \
     trainer.dataloader_num_workers="$NUM_WORKERS" \
     trainer.gradient_accumulation_steps="$GRADIENT_ACCUMULATION_STEPS" \
     trainer.max_steps="$MAX_STEPS" \
@@ -235,7 +237,7 @@ set -o pipefail
 | --- | --- | --- | --- | --- |
 | 卡数 | 4 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 1 卡 |
 | 相机 / 帧 | 7 路 / 每路 4 帧 | 同官方完整配置 | 1 路 / 1 帧 | 同官方调试配置 |
-| 数据 chunk | 训练 0–98；验证 99 | 相同，须准备完整数据 | 训练和验证均为 0 | 同官方调试配置 |
+| 数据 chunk | 训练 0–98；验证 99 | 训练和验证均为 0 | 训练和验证均为 0 | 同官方调试配置 |
 | 每卡 batch / 梯度累积 | 1 / 16 | 1 / 1 | 1 / 1 | 1 / 1 |
 | 每进程 worker | 4 | 默认 4，可通过 `NUM_WORKERS` 调整 | 0 | 默认 0，可通过 `NUM_WORKERS` 调整 |
 | 训练步数 | 100000 | 100000 | 2 | 2 |
