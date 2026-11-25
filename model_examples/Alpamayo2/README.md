@@ -2,11 +2,9 @@
 
 本文介绍在海光 HCU 上准备 [Alpamayo 2 Super](https://github.com/NVlabs/alpamayo2) Stage 1 环境、安装 TurboPhysAI，并启动单节点八卡训练。
 
-NVIDIA 的完整 Stage 1 配方使用 4 节点、每节点 8 卡；官方单节点调试配方使用八卡，并非单卡。本文提供单节点八卡完整配置和基于官方调试配置调整的单卡实验命令，两者在 HCU 上均未完成完整验证，可能发生显存不足。
-
 ## 1. 启动容器
 
-在 nmz5 宿主机执行。以下基础镜像与已使用的 ACT v8 容器一致，需预先存在于宿主机。容器启动参数参考[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)：
+容器启动参数参考[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)：
 
 ```bash
 export CONTAINER_NAME=alpamayo2-v1
@@ -34,8 +32,6 @@ docker run -dit \
 
 docker exec -it "$CONTAINER_NAME" bash
 ```
-
-上面的 `--privileged` 等设置与安装指南一致，会赋予容器较高的宿主机权限，仅应在可信环境使用。`/workspace` 映射到宿主机的 `/public/home/cuiqi/alpamayo2`，容器内创建的源码、日志及输出也会保存在该目录。
 
 ## 2. 获取模型源码
 
@@ -82,8 +78,6 @@ git clone --branch alpamayo2 --single-branch \
 
 /usr/local/bin/python3 -m pip install --no-build-isolation /workspace/TurboPhysAI
 ```
-
-`alpamayo2` 是开发分支，并非正式发布版本。安装需要当前环境已具备海光 PyTorch、编译工具及兼容的构建依赖；还需确认 Pillow 满足模型要求。源码更新后需重新安装。该精简安装流程尚未在新容器中验证。
 
 ## 5. 数据集与权重
 
