@@ -176,7 +176,12 @@ set -o pipefail
 
 ## 7. 单卡 Stage 1 调试实验
 
-官方 `sft_stage1_single_node_debug` 是**单节点八卡**的两步调试配置，不是官方单卡训练方案。以下命令仅将其调整为单卡实验：使用 1 路相机、1 帧、chunk 0、每卡 batch size 1、梯度累积 1、2 step、每进程 0 个 worker 和 ZeRO-3 优化器 CPU offload；数据加载优化组保持关闭。该单卡组合尚未验证，可能因模型或训练状态过大而 OOM。调试配置默认不保存 checkpoint。
+| 配置 | 节点 / 卡数 | 相机 / 帧数 | 精度 | 每卡 batch size | 梯度累积 | 每进程 worker | 重计算 | DeepSpeed | 训练步数 | checkpoint |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 官方单节点调试配置 | 1 节点 × 8 卡 | 1 路 / 1 帧 | BF16 | 1 | 1 | 0 | 开启 | ZeRO-3，优化器 CPU offload | 2 | 不保存 |
+| 当前单卡实验配置 | 1 节点 × 1 卡 | 1 路 / 1 帧 | BF16 | 1 | 1 | 0 | 开启 | ZeRO-3，优化器 CPU offload | 2 | 不保存 |
+
+当前单卡实验尚未验证，可能因显存不足而 OOM。
 
 如需使用官方的八卡调试卡数，将下面的 `HIP_VISIBLE_DEVICES` 改为 `0,1,2,3,4,5,6,7`，并将 `--nproc_per_node` 改为 `8`。
 
