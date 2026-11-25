@@ -28,7 +28,6 @@ optimization_groups:
       - ast-v1:7805bc7c935e564788910bc724271ccf73ad231f2313e5bb6e89d0de16251919
       transformers.trainer.DataLoader:
       - ast-v1:275d616c192dd913fab3d8e5fffbe702d44305d95c3bf113c7051989411176bf
-  accuracy_only: false
 - id: alpamayo2.flash_attention
   enabled: true
   options: {}
@@ -39,7 +38,6 @@ optimization_groups:
     ast_hashes:
       alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.__init__:
       - ast-v1:eb0060dc6c66f461afcaac3aa8e22d165b29ba35b57815aa2465666636c4f3a7
-  accuracy_only: false
 - id: alpamayo2.non_blocking_h2d
   enabled: true
   options: {}
@@ -50,6 +48,5 @@ optimization_groups:
     ast_hashes:
       transformers.trainer.Trainer.create_accelerator_and_postprocess:
       - ast-v1:7b234d4a01131cf8a035575276c276fd68c5032f38ff1d8f8a600634ed5f4e79
-  accuracy_only: false
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog
