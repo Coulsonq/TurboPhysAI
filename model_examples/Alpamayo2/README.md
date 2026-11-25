@@ -1,4 +1,4 @@
-# Alpamayo 2 Super 模型应用说明
+# Alpamayo 2 应用说明
 
 本文介绍在海光 HCU 上准备 [Alpamayo 2 Super](https://github.com/NVlabs/alpamayo2) Stage 1 环境、安装 TurboPhysAI，并启动单节点八卡训练。
 
