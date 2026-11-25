@@ -9,7 +9,7 @@ NVIDIA 的完整 Stage 1 配方使用 4 节点、每节点 8 卡；官方单节�
 在 nmz5 宿主机执行。以下基础镜像与已使用的 ACT v8 容器一致，需预先存在于宿主机。容器启动参数参考[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)：
 
 ```bash
-export CONTAINER_NAME=alpamayo2-hcu
+export CONTAINER_NAME=alpamayo2-v1
 export IMAGE=dit-vla-wm-base:ubuntu22.04-dtk26.10-torch2.13-py3.12-cuiqi-80fkhsqb
 
 docker run -dit \
