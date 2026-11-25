@@ -60,14 +60,19 @@ cd /workspace
   opencv-python==5.0.0.93 rich==15.0.0 wandb==0.28.1 pytest==8.4.2 \
   ninja wheel 'setuptools<81'
 
-DS_BUILD_OPS=0 /usr/local/bin/python3 -m pip install --no-build-isolation deepspeed==0.19.1
+source /opt/dtk/env.sh
+git clone --branch v0.19.7-dev --depth 1 \
+  https://github.com/HYGON-AI/Deepspeed-das.git /workspace/Deepspeed-das-alpamayo-20261125
+/usr/local/bin/python3 -m pip install --no-deps hjson msgpack py-cpuinfo
+cd /workspace/Deepspeed-das-alpamayo-20261125
+/usr/local/bin/python3 -m pip install --no-deps --no-build-isolation .
 
 /usr/local/bin/python3 -m pip install --no-deps -e /workspace/alpamayo2 \
   -e /workspace/alpamayo-recipes/src \
   -e /workspace/alpamayo-recipes/recipes/alpamayo2_sft
 ```
 
-`DS_BUILD_OPS=0` 表示安装时不预编译 DeepSpeed 算子，运行时可能按需编译。
+上述命令在海光 DeepSpeed 提交 `0b8d6afe36f9d1e1c045449a3d16121aea4f69b3` 上验证；分支更新后实际提交可能不同。Linux 默认安装不预编译 DeepSpeed 算子，运行时可能按需编译。
 
 ## 4. 获取并安装 TurboPhysAI
 
