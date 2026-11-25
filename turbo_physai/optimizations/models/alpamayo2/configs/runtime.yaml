@@ -1,0 +1,11 @@
+# Copyright 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: BSD-3-Clause
+
+schema_version: turbophysai/runtime-config/v1
+kind: RuntimeConfig
+environment:
+  set:
+    HIP_BUFFER_EXTRA_SIZE: "0"
+  unset: []
+process:
+  numa: false

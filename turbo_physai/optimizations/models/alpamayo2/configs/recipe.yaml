@@ -1,0 +1,24 @@
+# Copyright 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: BSD-3-Clause
+
+schema_version: turbophysai/optimization-config/v1
+kind: OptimizationConfig
+metadata:
+  id: model.alpamayo2.hcu
+  version: "0.1.0"
+  description: Alpamayo 2 Super Stage 1 HCU optimizations
+model:
+  name: alpamayo2
+optimization_modules:
+  - turbo_physai.optimizations.models.alpamayo2.catalog
+extends: []
+compatibility: {}
+optimization_groups:
+  - id: alpamayo2.spawn_dataloader
+    enabled: true
+    options:
+      num_workers: 2
+  - id: alpamayo2.flash_attention
+    enabled: true
+  - id: alpamayo2.non_blocking_h2d
+    enabled: true

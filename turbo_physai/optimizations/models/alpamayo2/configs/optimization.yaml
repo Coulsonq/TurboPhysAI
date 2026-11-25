@@ -1,0 +1,55 @@
+# Copyright 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: BSD-3-Clause
+
+schema_version: turbophysai/optimization-config/v1
+kind: OptimizationConfig
+metadata:
+  id: model.alpamayo2.hcu
+  version: 0.1.0
+  description: Alpamayo 2 Super Stage 1 HCU optimizations
+model:
+  name: alpamayo2
+compatibility:
+  commits:
+  - 622f9d23ff9e4961ba8c6aac71367776cdf6b016
+optimization_groups:
+- id: alpamayo2.spawn_dataloader
+  enabled: true
+  options:
+    num_workers: 2
+  trust:
+    source_hashes:
+      alpamayo2_sft.trainer.Alpamayo2SuperTrainer.get_train_dataloader:
+      - source-v1:205a99685f8facd98a273c284296c1dc5b6a598499afbfaefd5dc1d363425771
+      transformers.trainer.DataLoader:
+      - source-v1:29c6b79c9a75b05f660068a0c78909adff4884ea272b517521655908af3d471a
+    ast_hashes:
+      alpamayo2_sft.trainer.Alpamayo2SuperTrainer.get_train_dataloader:
+      - ast-v1:7805bc7c935e564788910bc724271ccf73ad231f2313e5bb6e89d0de16251919
+      transformers.trainer.DataLoader:
+      - ast-v1:275d616c192dd913fab3d8e5fffbe702d44305d95c3bf113c7051989411176bf
+  accuracy_only: false
+- id: alpamayo2.flash_attention
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.__init__:
+      - source-v1:c69e5f77ba5d498246be4984ac6bdb134947fe11d6a2cf62f9702b24191986bc
+    ast_hashes:
+      alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.__init__:
+      - ast-v1:eb0060dc6c66f461afcaac3aa8e22d165b29ba35b57815aa2465666636c4f3a7
+  accuracy_only: false
+- id: alpamayo2.non_blocking_h2d
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      transformers.trainer.Trainer.create_accelerator_and_postprocess:
+      - source-v1:60c46eae3b259133381b7bd4dd47142dc4178d42d2db51800f5800002b6021f0
+    ast_hashes:
+      transformers.trainer.Trainer.create_accelerator_and_postprocess:
+      - ast-v1:7b234d4a01131cf8a035575276c276fd68c5032f38ff1d8f8a600634ed5f4e79
+  accuracy_only: false
+optimization_modules:
+- turbo_physai.optimizations.models.alpamayo2.catalog
