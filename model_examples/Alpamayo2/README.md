@@ -2,7 +2,7 @@
 
 本文介绍在海光 HCU 上准备 [Alpamayo 2 Super](https://github.com/NVlabs/alpamayo2) Stage 1 环境、安装 TurboPhysAI，并启动单节点八卡训练。
 
-NVIDIA 的完整 Stage 1 配方使用 4 节点、每节点 8 卡。本文启动命令将节点数改为 1，其余模型和训练参数沿用官方配置；按需关闭 checkpoint 保存。单节点八卡使用官方完整配置的显存需求和训练过程尚未验证，可能发生显存不足。
+NVIDIA 的完整 Stage 1 配方使用 4 节点、每节点 8 卡；官方单节点调试配方使用八卡，并非单卡。本文提供单节点八卡完整配置和基于官方调试配置调整的单卡实验命令，两者在 HCU 上均未完成完整验证，可能发生显存不足。
 
 ## 1. 启动容器
 
@@ -114,7 +114,7 @@ export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 
 ## 6. 单节点八卡 Stage 1 训练
 
-先完成完整数据准备，然后在容器内执行。下面的训练参数沿用官方 `sft_stage1`：7 路相机、每路 4 帧、BF16、每卡 batch size 1、梯度累积 16、重计算开启、DeepSpeed ZeRO-3；8 卡时有效全局 batch size 为 128。仅将节点数改为 1，并按需禁用 checkpoint 保存。
+先完成完整数据准备，然后在容器内执行。下面使用官方 `sft_stage1`：7 路相机、每路 4 帧、BF16、每卡 batch size 1、梯度累积 16、重计算开启、DeepSpeed ZeRO-3。相对官方四节点配置，此处改为单节点八卡，并关闭 checkpoint 保存；有效全局 batch size 从 512 降为 128。
 
 TurboPhysAI 的 `flash_attention` 和 `non_blocking_h2d` 改变执行方式；为保留官方每卡 4 个数据加载 worker，命令中关闭了将 worker 改为 2 的 `spawn_dataloader` 优化组。优化组已在不同的 5-step 实验配置中做过吞吐验证，但本节官方完整配置及其精度尚未验证。
 
@@ -156,7 +156,60 @@ turbo-physai run \
 
 根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；通过 `NUM_WORKERS` 调整每个训练进程的数据加载 worker 数，默认 4，八卡合计 32 个。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
-## 7. 优化项
+## 7. 单卡 Stage 1 调试实验
+
+官方 `sft_stage1_single_node_debug` 是**单节点八卡**的两步调试配置，不是官方单卡训练方案。以下命令仅将其调整为单卡实验：使用 1 路相机、1 帧、chunk 0、每卡 batch size 1、梯度累积 1、2 step、每进程 0 个 worker 和 ZeRO-3 优化器 CPU offload；数据加载优化组保持关闭。该单卡组合尚未验证，可能因模型或训练状态过大而 OOM。调试配置默认不保存 checkpoint。
+
+如需使用官方的八卡调试卡数，将下面的 `HIP_VISIBLE_DEVICES` 改为 `0,1,2,3,4,5,6,7`，并将 `--nproc_per_node` 改为 `8`。
+
+```bash
+source /workspace/venv/bin/activate
+export MODEL_DIR=/workspace/alpamayo2-super
+export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
+NUM_WORKERS=0
+export HIP_VISIBLE_DEVICES=0
+export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
+
+cd /workspace/alpamayo-recipes/recipes/alpamayo2_sft
+mkdir -p /workspace/logs /workspace/outputs
+STAMP="$(date +%Y%m%d_%H%M%S)"
+set -o pipefail
+
+turbo-physai run \
+  --optimization-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
+  --runtime-config /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/runtime.yaml \
+  --disable-group alpamayo2.spawn_dataloader \
+  -- \
+  torchrun \
+    --standalone --nnodes=1 --nproc_per_node=1 \
+    -m alpamayo2_sft.train_hf \
+    --config-path pkg://alpamayo2_sft/configs \
+    --config-name sft_stage1_single_node_debug \
+    model.pretrained_model_name_or_path="$MODEL_DIR" \
+    data.train_dataset.local_dir="$PAI_DIR" \
+    data.val_dataset.local_dir="$PAI_DIR" \
+    trainer.dataloader_num_workers="$NUM_WORKERS" \
+    trainer.save_strategy=no \
+    paths.output_dir="/workspace/outputs/alpamayo2-stage1-debug-1gpu-${STAMP}" \
+    2>&1 | tee "/workspace/logs/alpamayo2-stage1-debug-1gpu-${STAMP}.log"
+```
+
+## 8. 与官方配置的区别
+
+| 项目 | 官方完整 Stage 1 | 本文八卡命令 | 官方单节点调试 | 本文单卡实验 |
+| --- | --- | --- | --- | --- |
+| 卡数 | 4 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 1 卡 |
+| 相机 / 帧 | 7 路 / 每路 4 帧 | 同官方完整配置 | 1 路 / 1 帧 | 同官方调试配置 |
+| 数据 chunk | 训练 0–98；验证 99 | 相同，须准备完整数据 | 训练和验证均为 0 | 同官方调试配置 |
+| 每卡 batch / 梯度累积 | 1 / 16 | 1 / 16 | 1 / 1 | 1 / 1 |
+| 每进程 worker | 4 | 默认 4，可通过 `NUM_WORKERS` 调整 | 0 | 默认 0，可通过 `NUM_WORKERS` 调整 |
+| 训练步数 | 100000 | 100000 | 2 | 2 |
+| DeepSpeed | ZeRO-3 | ZeRO-3 | ZeRO-3，优化器 CPU offload | 同官方调试配置 |
+| checkpoint | 默认保存，每 500 步 | 不保存 | 不保存 | 不保存 |
+
+两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
+
+## 9. 优化项
 
 | 优化组 | 作用 | 第 6 节命令 |
 | --- | --- | --- |
