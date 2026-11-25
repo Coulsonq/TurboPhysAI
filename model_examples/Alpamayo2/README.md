@@ -126,9 +126,9 @@ cd /workspace/alpamayo-recipes
 
 ## 6. 单节点八卡 Stage 1 训练
 
-先完成完整数据准备，然后在容器内执行。下面使用官方 `sft_stage1`：7 路相机、每路 4 帧、BF16、每卡 batch size 1、梯度累积 16、重计算开启、DeepSpeed ZeRO-3。相对官方四节点配置，此处改为单节点八卡，并关闭 checkpoint 保存；有效全局 batch size 从 512 降为 128。
+官方配置：4 节点、每节点 8 卡；7 路相机、每路 4 帧；BF16、每卡 batch size 1、梯度累积 16、每进程 4 个 worker；开启重计算和 DeepSpeed ZeRO-3，训练 100000 step，默认保存 checkpoint。
 
-TurboPhysAI 的 `flash_attention` 和 `non_blocking_h2d` 改变执行方式；为保留官方每卡 4 个数据加载 worker，命令中关闭了将 worker 改为 2 的 `spawn_dataloader` 优化组。优化组已在不同的 5-step 实验配置中做过吞吐验证，但本节官方完整配置及其精度尚未验证。
+当前配置：1 节点 8 卡；7 路相机、每路 4 帧；BF16、每卡 batch size 1、梯度累积 16、每进程 4 个 worker；开启重计算和 DeepSpeed ZeRO-3，训练 100000 step，不保存 checkpoint。
 
 ```bash
 # 模型权重目录与数据集目录
