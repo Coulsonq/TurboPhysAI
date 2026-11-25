@@ -37,7 +37,7 @@ docker exec -it "$CONTAINER_NAME" bash
 
 上面的 `--privileged` 等设置与安装指南一致，会赋予容器较高的宿主机权限，仅应在可信环境使用。`/workspace` 映射到宿主机的 `/public/home/cuiqi/alpamayo2`，容器内创建的源码、虚拟环境、日志及输出也会保存在该目录。
 
-## 2. 获取源码
+## 2. 获取模型源码
 
 以下命令在容器内执行：
 
@@ -49,13 +49,9 @@ git -C /workspace/alpamayo-recipes checkout --detach 622f9d23ff9e4961ba8c6aac713
 
 git clone https://github.com/NVlabs/alpamayo2.git
 git -C /workspace/alpamayo2 checkout --detach 9596749e33552468f3ae70da8c237bdd0401e59a
-
-git clone --branch alpamayo2 --single-branch https://github.com/Coulsonq/TurboPhysAI.git /workspace/TurboPhysAI
 ```
 
-`alpamayo2` 是开发分支，并非 TurboPhysAI 正式发布版本。请记录 `git -C /workspace/TurboPhysAI rev-parse HEAD` 的输出，以便复现。
-
-## 3. 安装环境和 TurboPhysAI
+## 3. 安装训练环境
 
 基础镜像提供 Python 3.12、DTK 26.10 和海光 PyTorch 2.13。创建继承镜像软件包的虚拟环境，保留海光 PyTorch；不要直接执行可能安装 CUDA 版 PyTorch 的官方 `uv sync`。
 
@@ -75,7 +71,17 @@ DS_BUILD_OPS=0 python -m pip install --no-build-isolation deepspeed==0.19.1
 python -m pip install --no-deps -e /workspace/alpamayo2 \
   -e /workspace/alpamayo-recipes/src \
   -e /workspace/alpamayo-recipes/recipes/alpamayo2_sft
+```
 
+`DS_BUILD_OPS=0` 表示安装时不预编译 DeepSpeed 算子，运行时可能按需编译。
+
+## 4. 获取并安装 TurboPhysAI
+
+在上一步创建的虚拟环境中执行：
+
+```bash
+cd /workspace
+git clone --branch alpamayo2 --single-branch https://github.com/Coulsonq/TurboPhysAI.git /workspace/TurboPhysAI
 python -m pip install -r /workspace/TurboPhysAI/requirements.txt
 python -m pip install ninja wheel 'setuptools<81'
 cd /workspace/TurboPhysAI
@@ -83,7 +89,7 @@ MAX_JOBS=8 python setup.py bdist_wheel
 python -m pip install --no-deps dist/turbo_physai-*.whl
 ```
 
-`DS_BUILD_OPS=0` 表示安装时不预编译 DeepSpeed 算子，运行时可能按需编译。TurboPhysAI 通过 wheel 安装，源码更新后需要重新构建并安装。上述完整安装流程尚需在新容器中验证。
+`alpamayo2` 是开发分支，并非 TurboPhysAI 正式发布版本。请记录 `git -C /workspace/TurboPhysAI rev-parse HEAD` 的输出，以便复现。TurboPhysAI 通过 wheel 安装，源码更新后需要重新构建并安装。上述完整安装流程尚需在新容器中验证。
 
 检查安装来源和设备：
 
@@ -93,7 +99,7 @@ python -c 'import turbo_physai._C; print(turbo_physai._C.__file__)'
 turbo-physai --help
 ```
 
-## 4. 数据集与权重
+## 5. 数据集与权重
 
 容器内使用以下已挂载路径：
 
@@ -106,7 +112,7 @@ export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 
 模型和数据集受访问许可约束，使用前请确认 [模型许可](https://huggingface.co/nvidia/Alpamayo2-Super)和[数据集许可](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles)适用于实际场景。不要将访问令牌写入命令、日志或文档。
 
-## 5. 单节点八卡 Stage 1 训练
+## 6. 单节点八卡 Stage 1 训练
 
 先完成完整数据准备，然后在容器内执行。下面的训练参数沿用官方 `sft_stage1`：7 路相机、每路 4 帧、BF16、每卡 batch size 1、梯度累积 16、重计算开启、DeepSpeed ZeRO-3；8 卡时有效全局 batch size 为 128。仅将节点数改为 1，并按需禁用 checkpoint 保存。
 
@@ -145,12 +151,12 @@ turbo-physai run \
 
 `+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
-## 6. 优化项
+## 7. 优化项
 
-| 优化组 | 作用 | 第 5 节命令 |
+| 优化组 | 作用 | 第 6 节命令 |
 | --- | --- | --- |
 | `alpamayo2.spawn_dataloader` | 每个 rank 使用 2 个 spawn 数据加载 worker | 关闭，保留官方的 4 个 worker |
 | `alpamayo2.flash_attention` | 使用 FlashAttention 2 | 开启 |
 | `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
 
-上述优化是在特定镜像、数据子集、BS=1、梯度累积 1 及优化器 CPU offload 条件下做的 5-step 吞吐实验；不等同于本节完整配置的性能或精度验证。需要启用 2-worker 优化时，可移除第 5 节命令中的 `--disable-group alpamayo2.spawn_dataloader`，但此时数据加载配置不再与官方默认一致。
+上述优化是在特定镜像、数据子集、BS=1、梯度累积 1 及优化器 CPU offload 条件下做的 5-step 吞吐实验；不等同于本节完整配置的性能或精度验证。需要启用 2-worker 优化时，可移除第 6 节命令中的 `--disable-group alpamayo2.spawn_dataloader`，但此时数据加载配置不再与官方默认一致。
