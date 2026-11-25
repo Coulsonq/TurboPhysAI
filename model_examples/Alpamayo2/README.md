@@ -124,8 +124,6 @@ cd /workspace/alpamayo-recipes
   --output-dir "$PAI_DIR"
 ```
 
-chunk 范围为左闭右开：`0-100` 下载 chunk 0–99，后续训练使用 `0-99`（chunk 0–98），验证使用 `99-100`（chunk 99）。完整数据量较大，下载前请确认有足够的存储空间。仅做第 7 节调试时，可将下载范围改为 `0-1`，只下载 chunk 0，但不能用于第 6 节的完整数据配置。
-
 ## 6. 单节点八卡 Stage 1 训练
 
 先完成完整数据准备，然后在容器内执行。下面使用官方 `sft_stage1`：7 路相机、每路 4 帧、BF16、每卡 batch size 1、梯度累积 16、重计算开启、DeepSpeed ZeRO-3。相对官方四节点配置，此处改为单节点八卡，并关闭 checkpoint 保存；有效全局 batch size 从 512 降为 128。
