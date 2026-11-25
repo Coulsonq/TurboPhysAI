@@ -130,7 +130,7 @@ cd /workspace/alpamayo-recipes
 | 配置 | 节点 / 卡数 | 相机 / 帧数 | 精度 | 每卡 batch size | 梯度累积 | 每进程 worker | 重计算 | DeepSpeed | 训练步数 | checkpoint |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 官方配置 | 4 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 默认保存 |
-| 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 不保存 |
+| 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 1 | 4 | 开启 | ZeRO-3 | 100000 | 不保存 |
 
 ```bash
 # 模型权重目录与数据集目录
@@ -139,7 +139,7 @@ export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
 # 每个训练进程的数据加载 worker 数，官方完整训练默认为 4
 NUM_WORKERS=4
 # 梯度累积次数，官方完整训练默认为 16
-GRADIENT_ACCUMULATION_STEPS=16
+GRADIENT_ACCUMULATION_STEPS=1
 # 训练 step 数，官方完整训练默认为 100000
 MAX_STEPS=100000
 export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
@@ -231,7 +231,7 @@ set -o pipefail
 | 卡数 | 4 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 8 卡 | 1 节点 × 1 卡 |
 | 相机 / 帧 | 7 路 / 每路 4 帧 | 同官方完整配置 | 1 路 / 1 帧 | 同官方调试配置 |
 | 数据 chunk | 训练 0–98；验证 99 | 相同，须准备完整数据 | 训练和验证均为 0 | 同官方调试配置 |
-| 每卡 batch / 梯度累积 | 1 / 16 | 1 / 16 | 1 / 1 | 1 / 1 |
+| 每卡 batch / 梯度累积 | 1 / 16 | 1 / 1 | 1 / 1 | 1 / 1 |
 | 每进程 worker | 4 | 默认 4，可通过 `NUM_WORKERS` 调整 | 0 | 默认 0，可通过 `NUM_WORKERS` 调整 |
 | 训练步数 | 100000 | 100000 | 2 | 2 |
 | DeepSpeed | ZeRO-3 | ZeRO-3 | ZeRO-3，优化器 CPU offload | 同官方调试配置 |
