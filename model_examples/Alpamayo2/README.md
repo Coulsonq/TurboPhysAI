@@ -126,9 +126,10 @@ cd /workspace/alpamayo-recipes
 
 ## 6. 单节点八卡 Stage 1 训练
 
-官方配置：4 节点、每节点 8 卡；7 路相机、每路 4 帧；BF16、每卡 batch size 1、梯度累积 16、每进程 4 个 worker；开启重计算和 DeepSpeed ZeRO-3，训练 100000 step，默认保存 checkpoint。
-
-当前配置：1 节点 8 卡；7 路相机、每路 4 帧；BF16、每卡 batch size 1、梯度累积 16、每进程 4 个 worker；开启重计算和 DeepSpeed ZeRO-3，训练 100000 step，不保存 checkpoint。
+| 配置 | 节点 / 卡数 | 相机 / 帧数 | 精度 | 每卡 batch size | 梯度累积 | 每进程 worker | 重计算 | DeepSpeed | 训练步数 | checkpoint |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 官方配置 | 4 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 默认保存 |
+| 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 16 | 4 | 开启 | ZeRO-3 | 100000 | 不保存 |
 
 ```bash
 # 模型权重目录与数据集目录
