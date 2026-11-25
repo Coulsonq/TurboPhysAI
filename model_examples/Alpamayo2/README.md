@@ -123,8 +123,12 @@ source /workspace/venv/bin/activate
 # 模型权重目录与数据集目录
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
-# 每个训练进程的数据加载 worker 数
+# 每个训练进程的数据加载 worker 数，官方完整训练默认为 4
 NUM_WORKERS=4
+# 梯度累积次数，官方完整训练默认为 16
+GRADIENT_ACCUMULATION_STEPS=16
+# 训练 step 数，官方完整训练默认为 100000
+MAX_STEPS=100000
 export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
 
@@ -149,12 +153,14 @@ turbo-physai run \
     data.val_dataset.local_dir="$PAI_DIR" \
     data.val_dataset.chunk_ids="99-100" \
     trainer.dataloader_num_workers="$NUM_WORKERS" \
+    trainer.gradient_accumulation_steps="$GRADIENT_ACCUMULATION_STEPS" \
+    trainer.max_steps="$MAX_STEPS" \
     paths.output_dir="/workspace/outputs/alpamayo2-stage1-${STAMP}" \
     +trainer.save_strategy=no \
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-${STAMP}.log"
 ```
 
-根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；通过 `NUM_WORKERS` 调整每个训练进程的数据加载 worker 数，默认 4，八卡合计 32 个。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
+根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；通过 `NUM_WORKERS` 调整每个训练进程的数据加载 worker 数，通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
 ## 7. 单卡 Stage 1 调试实验
 
@@ -166,7 +172,12 @@ turbo-physai run \
 source /workspace/venv/bin/activate
 export MODEL_DIR=/workspace/alpamayo2-super
 export PAI_DIR=/workspace/PhysicalAI-Autonomous-Vehicles-stage1-7cam
+# 每个训练进程的数据加载 worker 数，官方单节点调试默认为 0
 NUM_WORKERS=0
+# 梯度累积次数，官方单节点调试默认为 1
+GRADIENT_ACCUMULATION_STEPS=1
+# 训练 step 数，官方单节点调试默认为 2
+MAX_STEPS=2
 export HIP_VISIBLE_DEVICES=0
 export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
 
@@ -189,6 +200,8 @@ turbo-physai run \
     data.train_dataset.local_dir="$PAI_DIR" \
     data.val_dataset.local_dir="$PAI_DIR" \
     trainer.dataloader_num_workers="$NUM_WORKERS" \
+    trainer.gradient_accumulation_steps="$GRADIENT_ACCUMULATION_STEPS" \
+    trainer.max_steps="$MAX_STEPS" \
     trainer.save_strategy=no \
     paths.output_dir="/workspace/outputs/alpamayo2-stage1-debug-1gpu-${STAMP}" \
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-debug-1gpu-${STAMP}.log"
