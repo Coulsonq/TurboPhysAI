@@ -278,28 +278,3 @@ process:
 CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；第 6 节命令通过 `--disable-group` 关闭该组，移除该参数即可启用该组。官方 `sft_stage1` 默认的 `configs/deepspeed/zero3.json` 本身没有 CPU offload，因此开启此组不会改变默认配置。若需要比较，可在训练参数中加 `trainer.deepspeed=configs/deepspeed/zero3_optimizer_offload.json`，关闭优化组保留 CPU offload，开启优化组关闭它；关闭 offload 会增加显存占用。
 
 `channels_last_vision` 与上述 MIOpen 设置已完成八卡 Stage 1 的 7 步短训；每卡 batch 1、无优化器 CPU offload 时，第 2–7 步平均耗时由 23.7344 秒降至 23.3056 秒，全局吞吐提高约 1.84%。这是单次短训结果，完整 loss 曲线和最终精度尚未验证。
-
-
-## 实验性优化组
-
-以下优化组默认关闭。短训结果不能代替完整训练的 loss 验证。
-
-| 优化组 | 作用及条件 |
-| --- | --- |
-| `alpamayo2.apex_fused_adamw` | 使用 Apex FusedAdam 的 AdamW 模式，并为 ZeRO-3 各子组维护独立更新步数；仅支持优化器不使用 CPU/NVMe offload、无梯度缩放且不启用 capturable/master weights 或 ZenFlow 的配置。 |
-| `alpamayo2.module_compile` | 对 `torch.nn.Linear.forward` 使用 `torch.compile(fullgraph=True)`；保留 ZeRO-3 和重计算，不包含整个模型。编译失败或超出重编译上限时直接报错。 |
-
-在 `turbo_physai/optimizations/models/alpamayo2/configs/recipe.yaml` 中将需要的组设置为 `enabled: true` 后，重新生成配置：
-
-```bash
-source /opt/dtk/env.sh
-export PYTHONPATH="/workspace/alpamayo-recipes/recipes:${PYTHONPATH:-}"
-/usr/local/bin/turbo-physai optimization generate \
-  --recipe /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/recipe.yaml \
-  --repo /workspace/alpamayo-recipes \
-  --commit 622f9d23ff9e4961ba8c6aac71367776cdf6b016 \
-  --output /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
-  --force
-```
-
-启用 Apex 时需确认实际 DeepSpeed 配置未开启 CPU/NVMe offload；如需由 `alpamayo2.disable_cpu_offload` 关闭 CPU offload，请从八卡命令中去掉禁用该组的 `--disable-group`。设置 `TURBO_PHYSAI_DISABLE_TORCH_COMPILE=1` 可显式关闭组件编译。

@@ -23,3 +23,15 @@ def test_default_channels_last_group_and_launch_environment(monkeypatch):
     assert effective_env['MIOPEN_FIND_MODE'] == '1'
     assert effective_env['PYTORCH_MIOPEN_SUGGEST_NHWC'] == '1'
     assert effective_env['HIP_BUFFER_EXTRA_SIZE'] == '0'
+
+
+def test_removed_experimental_groups_are_not_registered():
+    from turbo_physai.optimizations.models.alpamayo2 import catalog
+
+    removed = {'alpamayo2.apex_fused_adamw', 'alpamayo2.module_compile'}
+    config_dir = resources.files('turbo_physai.optimizations.models.alpamayo2').joinpath('configs')
+    for name in ('recipe.yaml', 'optimization.yaml'):
+        config = yaml.safe_load(config_dir.joinpath(name).read_text(encoding='utf-8'))
+        assert not removed.intersection(item['id'] for item in config['optimization_groups'])
+    assert not hasattr(catalog, 'APEX_FUSED_ADAMW')
+    assert not hasattr(catalog, 'MODULE_COMPILE')

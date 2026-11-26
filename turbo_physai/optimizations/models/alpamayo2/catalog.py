@@ -43,19 +43,6 @@ DISABLE_CPU_OFFLOAD = group(
 )
 
 
-APEX_FUSED_ADAMW = group(
-    "alpamayo2.apex_fused_adamw",
-    wrap(
-        target="alpamayo2_sft.trainer.Alpamayo2SuperTrainer.create_optimizer",
-        replacement="turbo_physai.optimizations.models.alpamayo2.apex_adamw.optimizer_wrapper",
-    ),
-    wrap(
-        target="deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3._optimizer_step",
-        replacement="turbo_physai.optimizations.models.alpamayo2.apex_adamw.zero3_step_wrapper",
-    ),
-)
-
-
 CHANNELS_LAST_VISION = group(
     "alpamayo2.channels_last_vision",
     wrap(
@@ -65,14 +52,5 @@ CHANNELS_LAST_VISION = group(
     wrap(
         target="torch.nn.modules.conv.Conv3d.forward",
         replacement="turbo_physai.optimizations.models.alpamayo2.channels_last.conv3d_forward_wrapper",
-    ),
-)
-
-
-MODULE_COMPILE = group(
-    "alpamayo2.module_compile",
-    wrap(
-        target="torch.nn.modules.linear.Linear.forward",
-        replacement="turbo_physai.optimizations.models.alpamayo2.module_compile.compile_module_wrapper",
     ),
 )

@@ -25,9 +25,5 @@ optimization_groups:
     enabled: true
   - id: alpamayo2.disable_cpu_offload
     enabled: true
-  - id: alpamayo2.apex_fused_adamw
-    enabled: false
   - id: alpamayo2.channels_last_vision
     enabled: true
-  - id: alpamayo2.module_compile
-    enabled: false
