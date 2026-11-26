@@ -54,3 +54,12 @@ CHANNELS_LAST_VISION = group(
         replacement="turbo_physai.optimizations.models.alpamayo2.channels_last.conv3d_forward_wrapper",
     ),
 )
+
+
+BF16_COMMUNICATION = group(
+    "alpamayo2.bf16_communication",
+    wrap(
+        target="accelerate.utils.dataclasses.DeepSpeedPlugin.set_mixed_precision",
+        replacement="turbo_physai.optimizations.models.alpamayo2.bf16_communication.bf16_communication_wrapper",
+    ),
+)

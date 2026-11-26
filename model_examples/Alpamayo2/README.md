@@ -246,7 +246,7 @@ set -o pipefail
 | DeepSpeed | ZeRO-3 | ZeRO-3 | ZeRO-3，优化器 CPU offload | 同官方调试配置 |
 | checkpoint | 默认保存，每 500 步 | 不保存 | 不保存 | 不保存 |
 
-两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d`、`channels_last_vision` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
+两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d`、`channels_last_vision`、`bf16_communication` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
 
 ## 9. 优化项
 
@@ -257,6 +257,7 @@ set -o pipefail
 | `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
 | `alpamayo2.channels_last_vision` | 将 Qwen3-VL 视觉 patch 的 Conv3d 输入转换为 `channels_last_3d`，配合 runtime 配置中的两个 MIOpen 环境变量 | 开启 |
 | `alpamayo2.disable_cpu_offload` | 将 DeepSpeed 配置中已有的 CPU 优化器和参数 offload 关闭 | 关闭 |
+| `alpamayo2.bf16_communication` | BF16 训练时，将 DeepSpeed 梯度归约通信 dtype 设置为 BF16 | 开启 |
 
 关闭 worker/OMP 组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.dataloader_workers_omp`。组开启后在训练参数初始化时设置线程数：PyTorch OpenMP 的线程数会调整；已初始化的其他第三方 OpenMP 库不一定受环境变量变更影响。
 
@@ -275,6 +276,8 @@ process:
   numa: false
 ```
 
+默认启用 `bf16_communication`：在 Accelerate 处理 DeepSpeed 配置前设置 `communication_data_type=bf16`，覆盖已有值；该组仅支持 BF16 混合精度训练。关闭该组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.bf16_communication`，恢复 Accelerate 的原有通信 dtype 选择。BF16 归约会改变浮点舍入，并覆盖当前 ROCm 环境中 Accelerate 的 FP32 通信保护；通信 dtype 与 H20 对齐不代表 loss 曲线或最终精度一致，需结合任务精度验证。
+
 CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；第 6 节命令通过 `--disable-group` 关闭该组，移除该参数即可启用该组。官方 `sft_stage1` 默认的 `configs/deepspeed/zero3.json` 本身没有 CPU offload，因此开启此组不会改变默认配置。若需要比较，可在训练参数中加 `trainer.deepspeed=configs/deepspeed/zero3_optimizer_offload.json`，关闭优化组保留 CPU offload，开启优化组关闭它；关闭 offload 会增加显存占用。
 
-`channels_last_vision` 与上述 MIOpen 设置已完成八卡 Stage 1 的 7 步短训；每卡 batch 1、无优化器 CPU offload 时，第 2–7 步平均耗时由 23.7344 秒降至 23.3056 秒，全局吞吐提高约 1.84%。这是单次短训结果，完整 loss 曲线和最终精度尚未验证。
+`channels_last_vision` 与上述 MIOpen 设置已完成八卡 Stage 1 的 7 步短训；每卡 batch 1、使用 FP32 梯度通信且无优化器 CPU offload 时，第 2–7 步平均耗时由 23.7344 秒降至 23.3056 秒，全局吞吐提高约 1.84%。这是单次短训结果，完整 loss 曲线和最终精度尚未验证。

@@ -27,3 +27,5 @@ optimization_groups:
     enabled: true
   - id: alpamayo2.channels_last_vision
     enabled: true
+  - id: alpamayo2.bf16_communication
+    enabled: true

@@ -73,5 +73,15 @@ optimization_groups:
       - ast-v1:af12441468499ca6f8e160e5d3b2f39df014dd324aa2e1aa0222aea5c7181d41
       torch.nn.modules.conv.Conv3d.forward:
       - ast-v1:0848aa6a1f8af0f13acfa9e4efbbbe1a827b94655000053204a92e4b669ae667
+- id: alpamayo2.bf16_communication
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      accelerate.utils.dataclasses.DeepSpeedPlugin.set_mixed_precision:
+      - source-v1:5a6058ea7818e4857549054853f569b658b551dc10d5d0cb5fb3fd761a2caed4
+    ast_hashes:
+      accelerate.utils.dataclasses.DeepSpeedPlugin.set_mixed_precision:
+      - ast-v1:fe49cf03a47f58df0c905c1754f646dce64d833e7d3447ad13a7bd41d2f0e435
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog
