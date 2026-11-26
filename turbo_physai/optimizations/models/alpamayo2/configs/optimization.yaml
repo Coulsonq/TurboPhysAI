@@ -83,5 +83,23 @@ optimization_groups:
     ast_hashes:
       accelerate.utils.dataclasses.DeepSpeedPlugin.set_mixed_precision:
       - ast-v1:fe49cf03a47f58df0c905c1754f646dce64d833e7d3447ad13a7bd41d2f0e435
+- id: alpamayo2.zero3_comm_overlap
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.__init__:
+      - source-v1:a10a04a9fe60b4fa2f562fca11ee88934fca7670e970e6089d15d75d183a6017
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3._DeepSpeedZeroOptimizer_Stage3__avg_scatter_grads:
+      - source-v1:89aab0f80f1a80b328a6b87b3cec95352b8973c4a69e3c805ac162950ff9f7fc
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.destroy:
+      - source-v1:0cf0f03a404d1b4454c6b69971836ede7618937f2923b646df2328cdf2cbb19a
+    ast_hashes:
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.__init__:
+      - ast-v1:fdf44cc81f2ccc453a2d1fae69fdac670be2bb656aaf47ab5ca753d54b3e612b
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3._DeepSpeedZeroOptimizer_Stage3__avg_scatter_grads:
+      - ast-v1:4778614e9d24e2932bea51d5388ec5db42b825b30df4d3d37a73c624c775377e
+      deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.destroy:
+      - ast-v1:48579763706e4be5eba7b3bfad1f9741f24a7564140e8a25e92c56c798b3940e
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog

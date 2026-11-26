@@ -29,3 +29,5 @@ optimization_groups:
     enabled: true
   - id: alpamayo2.bf16_communication
     enabled: true
+  - id: alpamayo2.zero3_comm_overlap
+    enabled: true

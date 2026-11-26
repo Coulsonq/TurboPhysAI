@@ -63,3 +63,20 @@ BF16_COMMUNICATION = group(
         replacement="turbo_physai.optimizations.models.alpamayo2.bf16_communication.bf16_communication_wrapper",
     ),
 )
+
+
+ZERO3_COMM_OVERLAP = group(
+    "alpamayo2.zero3_comm_overlap",
+    wrap(
+        target="deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.__init__",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_overlap.optimizer_init_wrapper",
+    ),
+    wrap(
+        target="deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3._DeepSpeedZeroOptimizer_Stage3__avg_scatter_grads",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_overlap.gradient_reduce_wrapper",
+    ),
+    wrap(
+        target="deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.destroy",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_overlap.optimizer_destroy_wrapper",
+    ),
+)

@@ -100,6 +100,16 @@ The bundled `kernel/sparse_conv/include/prettyprint.h` file is registered separa
 | `turbo_physai/optimizations/models/bevformer/mdc.py` | `mmcv/ops/modulated_deform_conv.py` | Modified |
 | `test/msda_reference.py` | `mmcv/ops/multi_scale_deform_attn.py` | Modified |
 
+### DeepSpeed
+
+- Repository: <https://github.com/HYGON-AI/Deepspeed-das>
+- Fixed commit: `0b8d6afe36f9d1e1c045449a3d16121aea4f69b3`
+- License: Apache-2.0
+
+| Local file | Upstream file | HYGON modification |
+| --- | --- | --- |
+| `turbo_physai/optimizations/models/alpamayo2/zero3_overlap.py` | `deepspeed/runtime/zero/stage3.py` (`DeepSpeedZeroOptimizer_Stage3.__avg_scatter_grads`) | Modified: preserve gradient scaling and casts while using a dedicated gradient process group. |
+
 The full Apache-2.0 text is in [third_party/licenses/Apache-2.0.txt](third_party/licenses/Apache-2.0.txt).
 
 ## Confirmed BSD-3-Clause derivations
