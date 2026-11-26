@@ -6,6 +6,8 @@ kind: RuntimeConfig
 environment:
   set:
     HIP_BUFFER_EXTRA_SIZE: "0"
+    MIOPEN_FIND_MODE: "1"
+    PYTORCH_MIOPEN_SUGGEST_NHWC: "1"
   unset: []
 process:
   numa: false

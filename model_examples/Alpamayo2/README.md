@@ -181,7 +181,7 @@ set -o pipefail
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-${STAMP}.log"
 ```
 
-根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；默认启用 worker/OMP 优化组，使用每个 rank 2 个 worker 和 4 个 PyTorch CPU 线程；关闭该组后通过 `NUM_WORKERS` 调整 worker 数。通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
+根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；默认启用 worker/OMP 优化组，使用每个 rank 2 个 worker 和 4 个 PyTorch CPU 线程；关闭该组后通过 `NUM_WORKERS` 调整 worker 数。通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`、`MIOPEN_FIND_MODE=1` 和 `PYTORCH_MIOPEN_SUGGEST_NHWC=1`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
 ## 7. 单卡 Stage 1 调试实验
 
@@ -246,7 +246,7 @@ set -o pipefail
 | DeepSpeed | ZeRO-3 | ZeRO-3 | ZeRO-3，优化器 CPU offload | 同官方调试配置 |
 | checkpoint | 默认保存，每 500 步 | 不保存 | 不保存 | 不保存 |
 
-两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
+两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d`、`channels_last_vision` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
 
 ## 9. 优化项
 
@@ -255,13 +255,29 @@ set -o pipefail
 | `alpamayo2.dataloader_workers_omp` | 每个 rank 使用 2 个 DataLoader worker，设置 PyTorch CPU 线程数及 `OMP_NUM_THREADS` 为 4；保留原有进程启动方式 | 开启 |
 | `alpamayo2.flash_attention` | 使用 FlashAttention 2 | 开启 |
 | `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
+| `alpamayo2.channels_last_vision` | 将 Qwen3-VL 视觉 patch 的 Conv3d 输入转换为 `channels_last_3d`，配合 runtime 配置中的两个 MIOpen 环境变量 | 开启 |
 | `alpamayo2.disable_cpu_offload` | 将 DeepSpeed 配置中已有的 CPU 优化器和参数 offload 关闭 | 关闭 |
 
 关闭 worker/OMP 组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.dataloader_workers_omp`。组开启后在训练参数初始化时设置线程数：PyTorch OpenMP 的线程数会调整；已初始化的其他第三方 OpenMP 库不一定受环境变量变更影响。
 
+关闭 `channels_last_vision` 时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.channels_last_vision`。优化组和运行时配置相互独立：仅关闭该组不会取消两个 MIOpen 环境变量。若也要取消环境变量，可将以下配置另存为自己的运行时配置，并用其路径替换训练命令中的 `--runtime-config`：
+
+```yaml
+schema_version: turbophysai/runtime-config/v1
+kind: RuntimeConfig
+environment:
+  set:
+    HIP_BUFFER_EXTRA_SIZE: "0"
+  unset:
+    - MIOPEN_FIND_MODE
+    - PYTORCH_MIOPEN_SUGGEST_NHWC
+process:
+  numa: false
+```
+
 CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；第 6 节命令通过 `--disable-group` 关闭该组，移除该参数即可启用该组。官方 `sft_stage1` 默认的 `configs/deepspeed/zero3.json` 本身没有 CPU offload，因此开启此组不会改变默认配置。若需要比较，可在训练参数中加 `trainer.deepspeed=configs/deepspeed/zero3_optimizer_offload.json`，关闭优化组保留 CPU offload，开启优化组关闭它；关闭 offload 会增加显存占用。
 
-以上新增或调整的优化组尚未完成八卡训练、性能及 loss 验证。
+`channels_last_vision` 与上述 MIOpen 设置已完成八卡 Stage 1 的 7 步短训；每卡 batch 1、无优化器 CPU offload 时，第 2–7 步平均耗时由 23.7344 秒降至 23.3056 秒，全局吞吐提高约 1.84%。这是单次短训结果，完整 loss 曲线和最终精度尚未验证。
 
 
 ## 实验性优化组
@@ -271,7 +287,6 @@ CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；
 | 优化组 | 作用及条件 |
 | --- | --- |
 | `alpamayo2.apex_fused_adamw` | 使用 Apex FusedAdam 的 AdamW 模式，并为 ZeRO-3 各子组维护独立更新步数；仅支持优化器不使用 CPU/NVMe offload、无梯度缩放且不启用 capturable/master weights 或 ZenFlow 的配置。 |
-| `alpamayo2.channels_last_vision` | 将 Qwen3-VL 视觉 patch 的 Conv3d 输入转换为 `channels_last_3d`；启动进程前需同时设置下面两个 MIOpen 环境变量。 |
 | `alpamayo2.module_compile` | 对 `torch.nn.Linear.forward` 使用 `torch.compile(fullgraph=True)`；保留 ZeRO-3 和重计算，不包含整个模型。编译失败或超出重编译上限时直接报错。 |
 
 在 `turbo_physai/optimizations/models/alpamayo2/configs/recipe.yaml` 中将需要的组设置为 `enabled: true` 后，重新生成配置：
@@ -285,13 +300,6 @@ export PYTHONPATH="/workspace/alpamayo-recipes/recipes:${PYTHONPATH:-}"
   --commit 622f9d23ff9e4961ba8c6aac71367776cdf6b016 \
   --output /workspace/TurboPhysAI/turbo_physai/optimizations/models/alpamayo2/configs/optimization.yaml \
   --force
-```
-
-启用 `channels_last_vision` 时，在八卡命令的 `turbo-physai run` 中、`--` 前增加：
-
-```bash
---set MIOPEN_FIND_MODE=1 \
---set PYTORCH_MIOPEN_SUGGEST_NHWC=1 \
 ```
 
 启用 Apex 时需确认实际 DeepSpeed 配置未开启 CPU/NVMe offload；如需由 `alpamayo2.disable_cpu_offload` 关闭 CPU offload，请从八卡命令中去掉禁用该组的 `--disable-group`。设置 `TURBO_PHYSAI_DISABLE_TORCH_COMPILE=1` 可显式关闭组件编译。

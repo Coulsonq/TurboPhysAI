@@ -59,11 +59,21 @@ optimization_groups:
     ast_hashes:
       transformers.integrations.deepspeed.HfTrainerDeepSpeedConfig.__init__:
       - ast-v1:5c8a79f77bb7ec9e893d07cc8b07ea88e32365a58954f8c64768b8e165a17b88
-- id: alpamayo2.apex_fused_adamw
-  enabled: false
-  options: {}
-  trust: {}
 - id: alpamayo2.channels_last_vision
+  enabled: true
+  options: {}
+  trust:
+    source_hashes:
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionPatchEmbed.__init__:
+      - source-v1:dc8972b2342cf3f3ff031dfdc20d5999beb5a1aed2caf736613e71203011d03c
+      torch.nn.modules.conv.Conv3d.forward:
+      - source-v1:91cbbd182f3c8657bd425dea60c472ad0354e5736663c3d0927e6514c846c681
+    ast_hashes:
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionPatchEmbed.__init__:
+      - ast-v1:af12441468499ca6f8e160e5d3b2f39df014dd324aa2e1aa0222aea5c7181d41
+      torch.nn.modules.conv.Conv3d.forward:
+      - ast-v1:0848aa6a1f8af0f13acfa9e4efbbbe1a827b94655000053204a92e4b669ae667
+- id: alpamayo2.apex_fused_adamw
   enabled: false
   options: {}
   trust: {}
