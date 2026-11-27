@@ -109,6 +109,9 @@ The bundled `kernel/sparse_conv/include/prettyprint.h` file is registered separa
 | Local file | Upstream file | HYGON modification |
 | --- | --- | --- |
 | `turbo_physai/optimizations/models/alpamayo2/zero3_overlap.py` | `deepspeed/runtime/zero/stage3.py` (`DeepSpeedZeroOptimizer_Stage3.__avg_scatter_grads`) | Modified: preserve gradient scaling and casts while using a dedicated gradient process group. |
+| `model_examples/Alpamayo2/deepspeed_patches/native_reduce_group.patch` | `deepspeed/ops/csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}`; `deepspeed/ops/csrc/includes/deepcompile.h` (wheel layout; repository `csrc/`) | Modified: bind a distinct native gradient communicator from the existing Turbo gradient group, preserving original reductions, scaling, buffers and streams. |
+| `model_examples/Alpamayo2/deepspeed_patches/zero3_input_guards.patch` | `deepspeed/compile/patch_fake_tensor.py` | Modified: restrict released-parameter shape guard replacement to ZeRO parameters, preserving symbolic shapes of ordinary batch tensors. |
+| `model_examples/Alpamayo2/deepspeed_patches/zero3_scheduler_kwargs.patch` | `deepspeed/compile/list_schedule.py` | Modified: preserve keyword tensor dependencies when ordering native ZeRO-3 backward graphs. |
 
 The full Apache-2.0 text is in [third_party/licenses/Apache-2.0.txt](third_party/licenses/Apache-2.0.txt).
 

@@ -1,0 +1,12 @@
+diff --git a/deepspeed/compile/list_schedule.py b/deepspeed/compile/list_schedule.py
+--- a/deepspeed/compile/list_schedule.py
++++ b/deepspeed/compile/list_schedule.py
+@@ -247,7 +247,7 @@ def get_node_requirements(target_node: Node, scheduled: List[Node]):
+         def register_arg(n: Node):
+             args.append(n)
+ 
+-        map_arg(node.args, register_arg)
++        map_arg((node.args, node.kwargs), register_arg)
+ 
+         for arg in args:
+             dfs(arg)
