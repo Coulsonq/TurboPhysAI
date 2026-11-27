@@ -8,6 +8,9 @@ environment:
     HIP_BUFFER_EXTRA_SIZE: "0"
     MIOPEN_FIND_MODE: "1"
     PYTORCH_MIOPEN_SUGGEST_NHWC: "1"
+    TORCHINDUCTOR_CACHE_DIR: "/workspace/alpamayo2-compile/inductor_cache_tuning/default"
+    TRITON_CACHE_DIR: "/workspace/alpamayo2-compile/triton_cache_tuning/default"
+    #ROCBLAS_TENSILE_LIBPATH: "/workspace/alpamayo2-compile/tuning_experiments/auto_select_tools_parallel/optimization_configs/new/config/library_gpu6"
   unset: []
 process:
-  numa: false
+  numa: true

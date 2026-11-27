@@ -80,3 +80,62 @@ ZERO3_COMM_OVERLAP = group(
         replacement="turbo_physai.optimizations.models.alpamayo2.zero3_overlap.optimizer_destroy_wrapper",
     ),
 )
+
+
+ZERO3_MODULE_COMPILE = group(
+    "alpamayo2.zero3_module_compile",
+    wrap(
+        target="torch._inductor.codegen.triton.TritonKernel.codegen_kernel",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.reduction_codegen_wrapper",
+    ),
+    wrap(
+        target="deepspeed.compile.init_z3._allow_dynamo_dynamic_parameter_shapes_for_z3",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.static_parameter_policy_wrapper",
+    ),
+    wrap(
+        target="deepspeed.runtime.engine.DeepSpeedEngine._initialize_deepcompile_native",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.native_init_wrapper",
+    ),
+    wrap(
+        target="deepspeed.runtime.config.DeepSpeedConfig.__init__",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.deepspeed_config_wrapper",
+    ),
+    wrap(
+        target="accelerate.accelerator.Accelerator._prepare_deepspeed",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.accelerator_prepare_wrapper",
+    ),
+    wrap(
+        target="alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.compile",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.root_compile_wrapper",
+    ),
+    wrap(
+        target="deepspeed.runtime.engine.DeepSpeedEngine.forward",
+        replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.engine_forward_wrapper",
+    ),
+    wrap(
+        target="transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionModel.forward",
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.vision_forward_wrapper",
+    ),
+    wrap(
+        target="transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLTextModel.forward",
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.text_forward_wrapper",
+    ),
+    wrap(
+        target="transformers.modeling_flash_attention_utils.lazy_import_flash_attention",
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.flash_import_wrapper",
+    ),
+    wrap(
+        target="transformers.modeling_flash_attention_utils._flash_attention_forward",
+        aliases=("transformers.integrations.flash_attention._flash_attention_forward",),
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.flash_metadata_wrapper",
+    ),
+    wrap(
+        target="torch.nn.modules.sparse.Embedding.forward",
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.parameter_forward_wrapper",
+    ),
+    wrap(
+        target="torch.nn.modules.linear.Linear.forward",
+        replacement="turbo_physai.optimizations.models.alpamayo2.qwen_regions.parameter_forward_wrapper",
+    ),
+    depends_on=("alpamayo2.flash_attention",),
+)

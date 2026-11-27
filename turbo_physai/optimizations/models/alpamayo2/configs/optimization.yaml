@@ -101,5 +101,64 @@ optimization_groups:
       - ast-v1:4778614e9d24e2932bea51d5388ec5db42b825b30df4d3d37a73c624c775377e
       deepspeed.runtime.zero.stage3.DeepSpeedZeroOptimizer_Stage3.destroy:
       - ast-v1:48579763706e4be5eba7b3bfad1f9741f24a7564140e8a25e92c56c798b3940e
+- id: alpamayo2.zero3_module_compile
+  enabled: true
+  options:
+    dynamic: true
+  trust:
+    source_hashes:
+      torch._inductor.codegen.triton.TritonKernel.codegen_kernel:
+      - source-v1:062b9c08e14751f44c9c5fda4f287e3cf97c329609ece3e6f588ff02667bc86d
+      deepspeed.compile.init_z3._allow_dynamo_dynamic_parameter_shapes_for_z3:
+      - source-v1:7ba054e439fc04c3492104a82fccc186cffe076cd5918628c710eefcb303f4fd
+      deepspeed.runtime.engine.DeepSpeedEngine._initialize_deepcompile_native:
+      - source-v1:1ec0cf00e2573634a7c7ba61fce92fdca3d62d18561be95667c6cddddf8f87c7
+      deepspeed.runtime.config.DeepSpeedConfig.__init__:
+      - source-v1:00061669d783bc0507c433e2f075de2723b4cf9e67fdf9a8182bf6aa449ffa40
+      accelerate.accelerator.Accelerator._prepare_deepspeed:
+      - source-v1:8fb9c8172a0f45a5b011f50fa73d2cd1f1110ce6351b72f7743625e01b1e3535
+      alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.compile:
+      - source-v1:3c25cd309f66991c36716f5760ac375d514c527e0894e4582acd24249c877d73
+      deepspeed.runtime.engine.DeepSpeedEngine.forward:
+      - source-v1:89aab0f80f1a80b328a6b87b3cec95352b8973c4a69e3c805ac162950ff9f7fc
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionModel.forward:
+      - source-v1:8a969ce19b67cb35979d1e17d9244a1a168b9aa0e84c688c89dc47668beec852
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLTextModel.forward:
+      - source-v1:b7b5cd7da0d3d7f24633deccdd1fa282b268ac42b5f84920bcffd4ef3675c5a8
+      transformers.modeling_flash_attention_utils.lazy_import_flash_attention:
+      - source-v1:0b197ac05965defc1bb06b145870cdf2b0d6422eecb46a04fd3286a46b8e5a62
+      transformers.modeling_flash_attention_utils._flash_attention_forward:
+      - source-v1:b3ff79d479339fb325447f65218922caaee55230129562fb501e91b9ade088e6
+      torch.nn.modules.sparse.Embedding.forward:
+      - source-v1:1dd1797f482e42eba706513121ea2339b2cf3592c806a4eac2bca0093abac66a
+      torch.nn.modules.linear.Linear.forward:
+      - source-v1:c0ab8f42cc3bf9489809b19c321cc85f0b1d4eafebacb96bd8e132cb9e95ef76
+    ast_hashes:
+      torch._inductor.codegen.triton.TritonKernel.codegen_kernel:
+      - ast-v1:3512bc5f24651d850cdbda7b75f4ebc1cfeda18673e52f15e201d774fd504bd8
+      deepspeed.compile.init_z3._allow_dynamo_dynamic_parameter_shapes_for_z3:
+      - ast-v1:42f81399273a611a5b0399c37f95dee2950540dea9746953a7016aadb3a6f7d5
+      deepspeed.runtime.engine.DeepSpeedEngine._initialize_deepcompile_native:
+      - ast-v1:190c43e191294f8c75f491115351fa0ea4d721083512e7aa0edecc32ef06aadf
+      deepspeed.runtime.config.DeepSpeedConfig.__init__:
+      - ast-v1:1b7ae98818e12ddc599372352ed452f8144ca75e44f0026c44a3d96d933249c0
+      accelerate.accelerator.Accelerator._prepare_deepspeed:
+      - ast-v1:65255c8606539b39b156ed2a126d38996a818e9afa7c6a927d50b0c940a8357a
+      alpamayo2_sft.models.trainable_alpamayo2_super.TrainableAlpamayo2Super.compile:
+      - ast-v1:21e444bc06332740a9e7bca35a024a4be7015b095ef0339809b67c63cea64b7d
+      deepspeed.runtime.engine.DeepSpeedEngine.forward:
+      - ast-v1:4778614e9d24e2932bea51d5388ec5db42b825b30df4d3d37a73c624c775377e
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionModel.forward:
+      - ast-v1:a69186b100780993b58a46c1feea20d63735e0413701df31b0dbfb8c074b1fb1
+      transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLTextModel.forward:
+      - ast-v1:e2d332aa5b440d132c7bd34bbcaef980a4a6d448dd223abb1a49a3353033da38
+      transformers.modeling_flash_attention_utils.lazy_import_flash_attention:
+      - ast-v1:26f6cbaa9bfb1f3cdbad120cfcf9458491e2db690869c048aace6f882a2f729a
+      transformers.modeling_flash_attention_utils._flash_attention_forward:
+      - ast-v1:97ce09535e653bd71e105eff2f7d99e05742c30e3c26dc45eec70323a1a68ba4
+      torch.nn.modules.sparse.Embedding.forward:
+      - ast-v1:d060c4e01d52dd0ed365cb76d6501140fce79dd8e5f3ce888f7480bb4a504d7a
+      torch.nn.modules.linear.Linear.forward:
+      - ast-v1:07fc2c98c4d70c8ba518887e5d6a3690be56e6da7976457dd4c6b2b372f30b68
 optimization_modules:
 - turbo_physai.optimizations.models.alpamayo2.catalog

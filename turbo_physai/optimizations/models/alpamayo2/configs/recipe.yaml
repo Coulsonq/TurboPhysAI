@@ -31,3 +31,7 @@ optimization_groups:
     enabled: true
   - id: alpamayo2.zero3_comm_overlap
     enabled: true
+  - id: alpamayo2.zero3_module_compile
+    enabled: true
+    options:
+      dynamic: true
