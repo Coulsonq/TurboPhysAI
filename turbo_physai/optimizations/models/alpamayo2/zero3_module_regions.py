@@ -177,7 +177,7 @@ def native_init_wrapper(original, options):
         if group is not None:
             setter = getattr(native, "set_reduce_process_group", None)
             if setter is None:
-                raise RuntimeError("DeepCompile with zero3_comm_overlap requires native_reduce_group.patch")
+                raise RuntimeError("DeepCompile with zero3_comm_overlap requires the Turbo-managed native extension")
             setter(group)
             if native.get_reduce_group_name() != group.group_name:
                 raise RuntimeError("native gradient communicator did not adopt the existing gradient group")

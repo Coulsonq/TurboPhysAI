@@ -85,6 +85,31 @@ ZERO3_COMM_OVERLAP = group(
 ZERO3_MODULE_COMPILE = group(
     "alpamayo2.zero3_module_compile",
     wrap(
+        target='deepspeed.ops.op_builder.dc.DeepCompileBuilder.load',
+        replacement='turbo_physai.optimizations.models.alpamayo2.native_deepspeed.native_load_wrapper',
+    ),
+    wrap(
+        target='deepspeed.compile.patch_fake_tensor.patch_fake_tensor',
+        replacement='turbo_physai.optimizations.models.alpamayo2.deepspeed_compat.activate_fake_compat_wrapper',
+        aliases=('deepspeed.compile.init_z3.patch_fake_tensor',),
+    ),
+    wrap(
+        target='torch._dynamo.variables.builder.wrap_to_fake_tensor_and_record',
+        replacement='turbo_physai.optimizations.models.alpamayo2.deepspeed_compat.fake_record_wrapper',
+    ),
+    wrap(
+        target='torch._dynamo.guards.GuardBuilder.TENSOR_MATCH',
+        replacement='turbo_physai.optimizations.models.alpamayo2.deepspeed_compat.tensor_match_wrapper',
+    ),
+    wrap(
+        target='torch._subclasses.fake_tensor.FakeTensorMode.from_tensor',
+        replacement='turbo_physai.optimizations.models.alpamayo2.deepspeed_compat.fake_from_tensor_wrapper',
+    ),
+    wrap(
+        target='deepspeed.compile.list_schedule.get_node_requirements',
+        replacement='turbo_physai.optimizations.models.alpamayo2.deepspeed_compat.node_requirements_wrapper',
+    ),
+    wrap(
         target="torch._inductor.codegen.triton.TritonKernel.codegen_kernel",
         replacement="turbo_physai.optimizations.models.alpamayo2.zero3_module_regions.reduction_codegen_wrapper",
     ),

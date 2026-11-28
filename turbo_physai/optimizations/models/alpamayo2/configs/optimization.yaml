@@ -107,6 +107,18 @@ optimization_groups:
     dynamic: true
   trust:
     source_hashes:
+      deepspeed.ops.op_builder.dc.DeepCompileBuilder.load:
+      - source-v1:47d513ddccc5335a90e8b4d54af367814f8cfe33552d0d2f8cc5457a4db36c45
+      deepspeed.compile.patch_fake_tensor.patch_fake_tensor:
+      - source-v1:aac27f371f353d2318c101a7bb8382081e3d5d84ca39862f0680806b3991410b
+      torch._dynamo.variables.builder.wrap_to_fake_tensor_and_record:
+      - source-v1:aea70669239c0dfbc3400a2d3aad058a79797adfc3151f13f8fa462b946ff3cd
+      torch._dynamo.guards.GuardBuilder.TENSOR_MATCH:
+      - source-v1:ff3dd00a6e50ab4486951f05f0e90ba3a45e1e34493053493552d7e582db1190
+      torch._subclasses.fake_tensor.FakeTensorMode.from_tensor:
+      - source-v1:de06ba6c6ffa1ac4e5a47472d7077dd7751a0d71c489ce5942603d5a72f96e66
+      deepspeed.compile.list_schedule.get_node_requirements:
+      - source-v1:f11814294d779e61bfd33595224a57d82cef310b4a4331b08c1ba50755025d5c
       torch._inductor.codegen.triton.TritonKernel.codegen_kernel:
       - source-v1:062b9c08e14751f44c9c5fda4f287e3cf97c329609ece3e6f588ff02667bc86d
       deepspeed.compile.init_z3._allow_dynamo_dynamic_parameter_shapes_for_z3:
@@ -134,6 +146,18 @@ optimization_groups:
       torch.nn.modules.linear.Linear.forward:
       - source-v1:c0ab8f42cc3bf9489809b19c321cc85f0b1d4eafebacb96bd8e132cb9e95ef76
     ast_hashes:
+      deepspeed.ops.op_builder.dc.DeepCompileBuilder.load:
+      - ast-v1:1727c298798672d60c8631a2d9a08118cb3be8012a7d3c3a1014c890c33f33a0
+      deepspeed.compile.patch_fake_tensor.patch_fake_tensor:
+      - ast-v1:fc7cf990e174f14d4c9904f4c0a5ead5888e4fadac713a8c0a9b914827b55579
+      torch._dynamo.variables.builder.wrap_to_fake_tensor_and_record:
+      - ast-v1:b41eee2a1b95767a47f57f8e213274c597360e3e7cf03ebe71e7e452901f56ab
+      torch._dynamo.guards.GuardBuilder.TENSOR_MATCH:
+      - ast-v1:1de003f5fc977ab8366e3f57e13985ee25cba349549b4e350ce6bf27134bf166
+      torch._subclasses.fake_tensor.FakeTensorMode.from_tensor:
+      - ast-v1:c9d94695dcbe2742eeb3d792155a15fb5053dcce02c9d475385b479bd10c2aca
+      deepspeed.compile.list_schedule.get_node_requirements:
+      - ast-v1:f8354f5f659a85744fac025cfe0a53c623a76495df8a9048368a478819e5c64f
       torch._inductor.codegen.triton.TritonKernel.codegen_kernel:
       - ast-v1:3512bc5f24651d850cdbda7b75f4ebc1cfeda18673e52f15e201d774fd504bd8
       deepspeed.compile.init_z3._allow_dynamo_dynamic_parameter_shapes_for_z3:

@@ -100,6 +100,18 @@ The bundled `kernel/sparse_conv/include/prettyprint.h` file is registered separa
 | `turbo_physai/optimizations/models/bevformer/mdc.py` | `mmcv/ops/modulated_deform_conv.py` | Modified |
 | `test/msda_reference.py` | `mmcv/ops/multi_scale_deform_attn.py` | Modified |
 
+### HuggingFace Transformers (Qwen3-VL module compile regions)
+
+- Repository: <https://github.com/huggingface/transformers>
+- Fixed commit: `a47e6666f8f9a61e44a5d149c5e3d230e6c8053c` (`v4.57.1`)
+- License: Apache-2.0
+- Local file: `turbo_physai/optimizations/models/alpamayo2/qwen_regions.py`
+- Upstream file: `src/transformers/models/qwen3_vl/modeling_qwen3_vl.py`
+- Modified: separate non-trainable grid/padding metadata from complete visual/text
+  compute regions; preserve trainable embedding interpolation, all blocks,
+  DeepStack, RoPE, normalization and checkpoint calls. FlashAttention itself is
+  invoked from the installed Transformers/vendor package, not copied.
+
 ### DeepSpeed
 
 - Repository: <https://github.com/HYGON-AI/Deepspeed-das>
@@ -109,9 +121,24 @@ The bundled `kernel/sparse_conv/include/prettyprint.h` file is registered separa
 | Local file | Upstream file | HYGON modification |
 | --- | --- | --- |
 | `turbo_physai/optimizations/models/alpamayo2/zero3_overlap.py` | `deepspeed/runtime/zero/stage3.py` (`DeepSpeedZeroOptimizer_Stage3.__avg_scatter_grads`) | Modified: preserve gradient scaling and casts while using a dedicated gradient process group. |
-| `model_examples/Alpamayo2/deepspeed_patches/native_reduce_group.patch` | `deepspeed/ops/csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}`; `deepspeed/ops/csrc/includes/deepcompile.h` (wheel layout; repository `csrc/`) | Modified: bind a distinct native gradient communicator from the existing Turbo gradient group, preserving original reductions, scaling, buffers and streams. |
-| `model_examples/Alpamayo2/deepspeed_patches/zero3_input_guards.patch` | `deepspeed/compile/patch_fake_tensor.py` | Modified: restrict released-parameter shape guard replacement to ZeRO parameters, preserving symbolic shapes of ordinary batch tensors. |
-| `model_examples/Alpamayo2/deepspeed_patches/zero3_scheduler_kwargs.patch` | `deepspeed/compile/list_schedule.py` | Modified: preserve keyword tensor dependencies when ordering native ZeRO-3 backward graphs. |
+| `turbo_physai/optimizations/models/alpamayo2/native/csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}`; `native/csrc/includes/deepcompile.h` | `deepspeed/ops/csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}`; `deepspeed/ops/csrc/includes/deepcompile.h` (wheel layout; repository `csrc/`) | Modified: bind a distinct native gradient communicator from the existing Turbo gradient group, preserving original reductions, scaling, buffers and streams. |
+| `turbo_physai/optimizations/models/alpamayo2/deepspeed_compat.py` (fake/guard wrappers) | `deepspeed/compile/patch_fake_tensor.py` | Modified: restrict released-parameter shape guard replacement to ZeRO parameters, preserving symbolic shapes of ordinary batch tensors. |
+| `turbo_physai/optimizations/models/alpamayo2/deepspeed_compat.py` (scheduler wrapper) | `deepspeed/compile/list_schedule.py` | Modified: preserve keyword tensor dependencies when ordering native ZeRO-3 backward graphs. |
+
+The installed Turbo package also contains:
+
+- `turbo_physai/optimizations/models/alpamayo2/deepspeed_compat.py`, adapted from
+  `deepspeed/compile/{patch_fake_tensor.py,list_schedule.py}` at the fixed commit
+  above: declare the ZeRO fake-tensor/semantic-guard handling through the Engine,
+  keep ordinary inputs dynamic, and include keyword dependencies in scheduling.
+- `turbo_physai/optimizations/models/alpamayo2/native/csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}`
+  and `native/csrc/includes/deepcompile.h`, derived from the corresponding
+  `csrc/` files at the same fixed DeepSpeed commit. These maintained native
+  sources add the independent gradient communicator. They and the Apache-2.0
+  license are installed wheel resources. `native_deepspeed.py` compiles the
+  native component using these sources and unchanged sources/headers from the
+  supported dependency; it never invokes patch or edits installed DeepSpeed.
+  Historical patch provenance is recorded in the original Git commits; the obsolete example files have been removed.
 
 The full Apache-2.0 text is in [third_party/licenses/Apache-2.0.txt](third_party/licenses/Apache-2.0.txt).
 

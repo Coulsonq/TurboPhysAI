@@ -7,6 +7,8 @@
 容器启动参数参考[安装指南](../../docs/zh/get_started/installation.md#使用产品镜像)：
 
 ```bash
+export ALPA_WORKSPACE="$HOME/alpamayo2"
+mkdir -p "$ALPA_WORKSPACE"
 export CONTAINER_NAME=alpamayo2-v1
 export IMAGE=dit-vla-wm-base:ubuntu22.04-dtk26.10-torch2.13-py3.12-cuiqi-80fkhsqb
 
@@ -26,7 +28,7 @@ docker run -dit \
   --ulimit memlock=-1:-1 \
   --workdir=/workspace \
   -v /opt/hyhal:/opt/hyhal:ro \
-  -v /public/home/cuiqi/alpamayo2:/workspace \
+  -v "$ALPA_WORKSPACE:/workspace" \
   "$IMAGE" \
   /bin/bash
 
@@ -62,17 +64,14 @@ cd /workspace
 
 source /opt/dtk/env.sh
 /usr/local/bin/python3 -m pip install --no-deps hjson msgpack py-cpuinfo
-/usr/local/bin/python3 -m pip install --no-deps --only-binary=:all: \
+/usr/local/bin/python3 -m pip install --target=/workspace/deepspeed --no-deps --only-binary=:all: \
   --index-url https://pypi.sourcefind.cn/nightly/dtk2610/+simple/ \
-  --target /workspace/deepspeed-wheel \
   'deepspeed==0.19.7+dtk2610.torch2130.2611241241.g0b8d6a'
 
 /usr/local/bin/python3 -m pip install --no-deps -e /workspace/alpamayo2 \
   -e /workspace/alpamayo-recipes/src \
   -e /workspace/alpamayo-recipes/recipes/alpamayo2_sft
 ```
-
-DeepSpeed 使用[光源发布的固定版本 wheel](https://pypi.sourcefind.cn/das_nightly/dtk2610/deepspeed/0.19.7%2Bdtk2610.torch2130.2611241241.g0b8d6a)，适配 Python 3.12、DTK 26.10 和海光 Torch 2.13，对应源码提交 `0b8d6afe36f9d1e1c045449a3d16121aea4f69b3`。这是后续 nmz107 实验使用的预编译包来源。`--no-deps` 保留镜像中的海光 Torch 和现有依赖；`--target` 将 wheel 解包到独立目录，供第 4 节构建带补丁的副本。`/workspace/deepspeed-wheel` 和第 4 节的输出目录应使用新目录。
 
 ## 4. 获取并安装 TurboPhysAI
 
@@ -85,40 +84,17 @@ git clone --branch alpamayo2 --single-branch \
 /usr/local/bin/python3 -m pip install --no-build-isolation /workspace/TurboPhysAI
 ```
 
-当前完整配置启用了四区域 ZeRO-3 compile，还需要构建实验中使用的 DeepSpeed native 副本。以下命令继续在容器内执行，需要 `patch`、C++ 编译器和镜像自带的 DTK 工具链：
+当前完整配置启用了四区域 ZeRO-3 compile。TurboPhysAI 的
+`alpamayo2.zero3_module_compile` 组负责 DeepSpeed 编译兼容与 native 扩展加载：
+保留普通输入的动态形状、补齐调度器 keyword tensor 依赖，并将编译图的梯度归约
+接入 `zero3_comm_overlap` 的独立通信组。
 
-```bash
-source /opt/dtk/env.sh
-mkdir -p /workspace/alpamayo2-compile
-MAX_JOBS=2 /usr/local/bin/python3 \
-  /workspace/TurboPhysAI/model_examples/Alpamayo2/deepspeed_patches/build_native.py \
-  --package /workspace/deepspeed-wheel \
-  --output /workspace/alpamayo2-compile/deepspeed_native
+首次使用时，Turbo 使用随包交付的 C++ 实现和已安装 DeepSpeed 的其余源码、头文件，在
+`${XDG_CACHE_HOME:-~/.cache}/turbo_physai/alpamayo2/deepcompile/` 下构建并缓存扩展。
+此步骤需要镜像的 DTK 工具链、C++ 编译器和 `ninja`；后续复用缓存。
+不需要手工应用 DeepSpeed 补丁、运行额外构建脚本或设置 DeepSpeed 副本的
+`PYTHONPATH`；已安装的 DeepSpeed 源文件保持原样。
 
-export PYTHONPATH="/workspace/alpamayo2-compile/deepspeed_native:${PYTHONPATH:-}"
-/usr/local/bin/python3 - <<'PY'
-from pathlib import Path
-import deepspeed
-from deepspeed.ops.op_builder.dc import DeepCompileBuilder
-
-root = Path('/workspace/alpamayo2-compile/deepspeed_native').resolve()
-native = DeepCompileBuilder().load()
-assert Path(deepspeed.__file__).resolve().is_relative_to(root)
-assert Path(native.__file__).resolve().is_relative_to(root)
-assert callable(getattr(native, 'set_reduce_process_group', None))
-assert callable(getattr(native, 'get_reduce_group_name', None))
-print('DeepSpeed:', deepspeed.__version__, deepspeed.__file__)
-print('DeepCompile:', native.__file__)
-PY
-```
-
-[构建脚本](deepspeed_patches/build_native.py)复制光源 wheel 到新的输出目录，依次应用三个补丁，并用该包自己的 builder 重编 DeepCompile 扩展：
-
-- `native_reduce_group.patch`：为编译图的梯度归约接入现有独立通信组。
-- `zero3_input_guards.patch`：仅对 ZeRO 参数处理释放后的 shape guard，保留普通输入的动态形状。
-- `zero3_scheduler_kwargs.patch`：让反向调度器计入 keyword tensor 依赖。
-
-后续实验实际加载的是 `/workspace/alpamayo2-compile/deepspeed_native/deepspeed/`。每次在新 shell 启动训练时，都需要先加载 DTK 环境并设置下面训练命令中的 `PYTHONPATH`。上述检查确认 Python 包和扩展的加载来源；训练是否成功仍以实际日志为准。
 
 ## 5. 数据集与权重
 
@@ -165,6 +141,45 @@ cd /workspace/alpamayo-recipes
   --output-dir "$PAI_DIR"
 ```
 
+执行第 2–5 节命令后，`/workspace` 下的主要目录结构如下（省略 Git、下载缓存及部分文件）：
+
+```text
+/workspace/
+├── TurboPhysAI/
+│   ├── model_examples/Alpamayo2/README.md
+│   └── turbo_physai/optimizations/models/alpamayo2/
+│       ├── configs/                # optimization.yaml、recipe.yaml、runtime.yaml
+│       ├── native/                 # Turbo 管理的 C++ 源码
+│       ├── native_deepspeed.py
+│       └── deepspeed_compat.py
+├── deepspeed/                      # pip --target 的安装目录
+│   ├── deepspeed/                  # 海光版 DeepSpeed Python 包
+│   ├── deepspeed.libs/
+│   └── deepspeed-*.dist-info/
+├── alpamayo2/
+│   └── src/
+├── alpamayo-recipes/
+│   ├── recipes/alpamayo2_sft/
+│   ├── src/
+│   └── scripts/download_pai.py
+├── alpamayo2-super/
+│   ├── config.json
+│   ├── model.safetensors.index.json
+│   ├── model-00001-of-00015.safetensors
+│   ├── …                          # 共 15 个权重分片
+│   └── model-00015-of-00015.safetensors
+└── PhysicalAI-Autonomous-Vehicles-stage1-7cam/
+    ├── clip_index.parquet
+    ├── features.csv
+    ├── calibration/
+    │   ├── camera_intrinsics/
+    │   └── sensor_extrinsics/
+    ├── camera/                    # 5.2 中指定的 7 路相机目录
+    └── labels/egomotion/
+```
+
+启动第 6 节训练后才会生成 `logs/`、`outputs/` 及 runtime 中指定的 `alpamayo2-compile/` 编译缓存；native 扩展缓存由 Turbo 自动管理。
+
 ## 6. 单节点八卡 Stage 1 训练
 
 | 配置 | 节点 / 卡数 | 相机 / 帧数 | 精度 | 每卡 batch size | 梯度累积 | 每进程 worker | 重计算 | DeepSpeed | 训练步数 | checkpoint |
@@ -173,6 +188,8 @@ cd /workspace/alpamayo-recipes
 | 当前配置 | 1 节点 × 8 卡 | 7 路 / 每路 4 帧 | BF16 | 1 | 1 | 2 | 开启 | ZeRO-3 | 100000 | 不保存 |
 
 训练和验证均使用 chunk 0，样本是否重叠取决于数据集划分；此配置用于调试，不能代表完整数据集训练或独立验证。
+
+八卡训练和下方单卡调试命令均显式覆盖 `PYTHONPATH`，指向第 3 节确定的 `/workspace/deepspeed` 安装目录及模型、recipes 源码目录，避免继承旧 DeepSpeed 副本路径而导致 `zero3_module_compile` 的 `source.identity` 检查失败。
 
 ```bash
 # 模型权重目录与数据集目录
@@ -185,7 +202,8 @@ GRADIENT_ACCUMULATION_STEPS=1
 # 训练 step 数，官方完整训练默认为 100000
 MAX_STEPS=100000
 source /opt/dtk/env.sh
-export PYTHONPATH="/workspace/alpamayo2-compile/deepspeed_native:${PYTHONPATH:-}"
+# 固定使用 workspace 中的海光版 DeepSpeed，覆盖旧 PYTHONPATH
+export PYTHONPATH="/workspace/deepspeed:/workspace/alpamayo2/src:/workspace/alpamayo-recipes/recipes"
 export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
 
@@ -217,7 +235,7 @@ set -o pipefail
     2>&1 | tee "/workspace/logs/alpamayo2-stage1-${STAMP}.log"
 ```
 
-根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；默认启用 worker/OMP 优化组，使用每个 rank 2 个 worker 和 4 个 PyTorch CPU 线程；关闭该组后通过 `NUM_WORKERS` 调整 worker 数。通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `/public/home/cuiqi/alpamayo2/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`、`MIOPEN_FIND_MODE=1` 和 `PYTORCH_MIOPEN_SUGGEST_NHWC=1`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
+根据实际目录修改 `MODEL_DIR` 和 `PAI_DIR`；默认启用 worker/OMP 优化组，使用每个 rank 2 个 worker 和 4 个 PyTorch CPU 线程；关闭该组后通过 `NUM_WORKERS` 调整 worker 数。通过 `GRADIENT_ACCUMULATION_STEPS` 和 `MAX_STEPS` 分别调整梯度累积次数和优化器更新步数。调整梯度累积次数会改变有效全局 batch size。`+trainer.save_strategy=no` 禁止保存 checkpoint；训练日志位于容器内 `/workspace/logs/`，对应宿主机 `$ALPA_WORKSPACE/logs/`。运行时配置设置 `HIP_BUFFER_EXTRA_SIZE=0`、`MIOPEN_FIND_MODE=1` 和 `PYTORCH_MIOPEN_SUGGEST_NHWC=1`。模型、数据和参数的实际使用以运行日志和生成的配置为准。
 
 ## 7. 单卡 Stage 1 调试实验
 
@@ -240,7 +258,8 @@ GRADIENT_ACCUMULATION_STEPS=1
 # 训练 step 数，官方单节点调试默认为 2
 MAX_STEPS=2
 source /opt/dtk/env.sh
-export PYTHONPATH="/workspace/alpamayo2-compile/deepspeed_native:${PYTHONPATH:-}"
+# 固定使用 workspace 中的海光版 DeepSpeed，覆盖旧 PYTHONPATH
+export PYTHONPATH="/workspace/deepspeed:/workspace/alpamayo2/src:/workspace/alpamayo-recipes/recipes"
 export HIP_VISIBLE_DEVICES=0
 export LD_LIBRARY_PATH="/opt/hyhal/lib:${LD_LIBRARY_PATH:-}"
 
@@ -285,43 +304,3 @@ set -o pipefail
 | checkpoint | 默认保存，每 500 步 | 不保存 | 不保存 | 不保存 |
 
 两条本文命令均使用海光镜像及其 PyTorch/DTK 环境，和官方 CUDA/H100 环境不同；并启用 TurboPhysAI 的 `flash_attention`、`non_blocking_h2d`、`channels_last_vision`、`bf16_communication`、`zero3_comm_overlap` 及 runtime 配置。路径、卡数、checkpoint 策略和可调整的 worker 以命令为准，其他未覆盖的训练参数由对应官方配置提供。
-
-## 9. 优化项
-
-| 优化组 | 作用 | 第 6 节命令 |
-| --- | --- | --- |
-| `alpamayo2.dataloader_workers_omp` | 每个 rank 使用 2 个 DataLoader worker，设置 PyTorch CPU 线程数及 `OMP_NUM_THREADS` 为 4；保留原有进程启动方式 | 开启 |
-| `alpamayo2.flash_attention` | 使用 FlashAttention 2 | 开启 |
-| `alpamayo2.non_blocking_h2d` | 开启数据异步传输 | 开启 |
-| `alpamayo2.channels_last_vision` | 将 Qwen3-VL 视觉 patch 的 Conv3d 输入转换为 `channels_last_3d`，配合 runtime 配置中的两个 MIOpen 环境变量 | 开启 |
-| `alpamayo2.disable_cpu_offload` | 将 DeepSpeed 配置中已有的 CPU 优化器和参数 offload 关闭 | 开启 |
-| `alpamayo2.bf16_communication` | BF16 训练时，将 DeepSpeed 梯度归约通信 dtype 设置为 BF16 | 开启 |
-| `alpamayo2.zero3_comm_overlap` | 为 ZeRO-3 梯度 Reduce-Scatter 创建独立通信组，使参数 All-Gather 不被梯度打包和归约阻塞 | 开启 |
-| `alpamayo2.zero3_module_compile` | 使用 native DeepSpeed 分别编译视觉 Encoder、Qwen 文本主干、Embedding 和 LM head；保留非重入 checkpoint，要求 ZeRO-3 且无 CPU offload | 开启 |
-
-关闭 worker/OMP 组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.dataloader_workers_omp`。组开启后在训练参数初始化时设置线程数：PyTorch OpenMP 的线程数会调整；已初始化的其他第三方 OpenMP 库不一定受环境变量变更影响。
-
-关闭 `channels_last_vision` 时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.channels_last_vision`。优化组和运行时配置相互独立：仅关闭该组不会取消两个 MIOpen 环境变量。若也要取消环境变量，可将以下配置另存为自己的运行时配置，并用其路径替换训练命令中的 `--runtime-config`：
-
-```yaml
-schema_version: turbophysai/runtime-config/v1
-kind: RuntimeConfig
-environment:
-  set:
-    HIP_BUFFER_EXTRA_SIZE: "0"
-  unset:
-    - MIOPEN_FIND_MODE
-    - PYTORCH_MIOPEN_SUGGEST_NHWC
-process:
-  numa: false
-```
-
-默认启用 `bf16_communication`：在 Accelerate 处理 DeepSpeed 配置前设置 `communication_data_type=bf16`，覆盖已有值；该组仅支持 BF16 混合精度训练。关闭该组时，在 `turbo-physai run` 的 `--` 之前增加 `--disable-group alpamayo2.bf16_communication`，恢复 Accelerate 的原有通信 dtype 选择。BF16 归约会改变浮点舍入，并覆盖当前 ROCm 环境中 Accelerate 的 FP32 通信保护；通信 dtype 与 H20 对齐不代表 loss 曲线或最终精度一致，需结合任务精度验证。
-
-默认启用 `zero3_comm_overlap`，关闭方式为 `--disable-group alpamayo2.zero3_comm_overlap`。该组仅支持单节点、WORLD 成员与 rank 顺序一致的 NCCL 数据并行、`reduce_scatter=true`，不支持 sequence parallel 或 all-to-all 梯度归约。不改变通信 dtype、梯度缩放和优化器更新前的完成同步；不支持的配置会明确报错。实现保留在 Alpamayo2 优化目录，本次未迁移到公共 DeepSpeed 优化目录。
-
-合入前的独立梯度通信组实现已在八卡 Stage 1、每卡 batch 1、GA 1、BF16 通信、无 CPU offload 下完成七步短训。去除首步后平均耗时从 18.9714 秒降至 15.4463 秒，全局吞吐从 0.4217 提高至 0.5179 sample/s（约 22.82%）；两个代表 rank 的第 3 步 trace 均确认梯度通信与主计算重叠。七步日志 loss 和 grad_norm 逐项相同，另有三步重计算小模型参数对照；这是合入前的短训数据，尚未验证完整 loss 曲线、跨机或其他并行布局。
-
-CPU offload 组在配置中 `enabled: true` 表示关闭已有的 CPU offload；第 6 节启用该组，以满足 native compile 的无 CPU offload 要求。官方 `sft_stage1` 默认的 `configs/deepspeed/zero3.json` 本身没有 CPU offload，因此开启此组不会改变默认配置。若需要比较 CPU offload，可先关闭 `zero3_module_compile`，在训练参数中加 `trainer.deepspeed=configs/deepspeed/zero3_optimizer_offload.json`，再通过 `disable_cpu_offload` 组控制是否保留 CPU offload；关闭 offload 会增加显存占用。
-
-`channels_last_vision` 与上述 MIOpen 设置已完成八卡 Stage 1 的 7 步短训；每卡 batch 1、使用 FP32 梯度通信且无优化器 CPU offload 时，第 2–7 步平均耗时由 23.7344 秒降至 23.3056 秒，全局吞吐提高约 1.84%。这是单次短训结果，完整 loss 曲线和最终精度尚未验证。

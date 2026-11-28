@@ -1,0 +1,7 @@
+DeepSpeed communicator native source implementation
+Derived from HYGON-AI/Deepspeed-das commit 0b8d6afe36f9d1e1c045449a3d16121aea4f69b3.
+Copyright (c) Microsoft Corporation.
+Modifications Copyright 2026 Hygon Information Technology Co., Ltd.
+Local sources: csrc/compile/{deepcompile.cpp,init.cpp,z3.cpp}; csrc/includes/deepcompile.h.
+Turbo modification: add an independent gradient communicator while retaining upstream reduction semantics.
+Apache-2.0; see LICENSE.

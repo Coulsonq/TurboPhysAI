@@ -430,6 +430,10 @@ setup(
             "optimizations/common/configs/*.yaml",
             "optimizations/common/*/configs/*.yaml",
             "optimizations/models/*/configs/*.yaml",
+            "optimizations/models/*/native/LICENSE",
+            "optimizations/models/*/native/NOTICE",
+            "optimizations/models/*/native/csrc/compile/*.cpp",
+            "optimizations/models/*/native/csrc/includes/*.h",
             "optimizations/common/configs/.*.generation.json",
             "optimizations/common/*/configs/.*.generation.json",
             "optimizations/models/*/configs/.*.generation.json",
@@ -438,6 +442,7 @@ setup(
             "bootstrap/_sitedir/sitecustomize.py",
         ],
     },
+    exclude_package_data={"turbo_physai": ["optimizations/models/alpamayo2/native/*.patch"]},
     ext_modules=get_extensions(),
     cmdclass={'build_ext': BuildReleaseExtension},
     classifiers=[
