@@ -141,7 +141,7 @@ cd /workspace/alpamayo-recipes
   --output-dir "$PAI_DIR"
 ```
 
-执行第 2–5 节命令后，`/workspace` 下的主要一级目录及用途如下：
+准备与训练涉及的主要一级目录及用途如下；训练时生成的目录已在备注中注明：
 
 ```text
 /workspace/
@@ -150,10 +150,13 @@ cd /workspace/alpamayo-recipes
 ├── alpamayo2/                                        # Alpamayo2 模型源码
 ├── alpamayo-recipes/                                 # 官方训练配方、训练入口和数据下载工具
 ├── alpamayo2-super/                                  # 预训练权重、模型配置及 tokenizer/processor 文件
-└── PhysicalAI-Autonomous-Vehicles-stage1-7cam/         # 7 路相机视频、标定、egomotion 标签及数据索引
+├── PhysicalAI-Autonomous-Vehicles-stage1-7cam/         # 7 路相机视频、标定、egomotion 标签及数据索引
+├── alpamayo2-compile/                                # 训练时生成，存放 TorchInductor、Triton 编译缓存
+├── logs/                                            # 训练时生成，保存终端运行日志
+└── outputs/                                         # 训练时生成，保存训练配置和运行输出
 ```
 
-启动第 6 节训练后才会生成 `logs/`、`outputs/` 及 runtime 中指定的 `alpamayo2-compile/` 编译缓存；native 扩展缓存由 Turbo 自动管理。
+native 扩展缓存由 Turbo 自动管理。
 
 ## 6. 单节点八卡 Stage 1 训练
 
