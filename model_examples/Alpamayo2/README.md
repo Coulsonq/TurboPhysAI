@@ -141,41 +141,16 @@ cd /workspace/alpamayo-recipes
   --output-dir "$PAI_DIR"
 ```
 
-执行第 2–5 节命令后，`/workspace` 下的主要目录结构如下（省略 Git、下载缓存及部分文件）：
+执行第 2–5 节命令后，`/workspace` 下的主要一级目录及用途如下：
 
 ```text
 /workspace/
-├── TurboPhysAI/
-│   ├── model_examples/Alpamayo2/README.md
-│   └── turbo_physai/optimizations/models/alpamayo2/
-│       ├── configs/                # optimization.yaml、recipe.yaml、runtime.yaml
-│       ├── native/                 # Turbo 管理的 C++ 源码
-│       ├── native_deepspeed.py
-│       └── deepspeed_compat.py
-├── deepspeed/                      # pip --target 的安装目录
-│   ├── deepspeed/                  # 海光版 DeepSpeed Python 包
-│   ├── deepspeed.libs/
-│   └── deepspeed-*.dist-info/
-├── alpamayo2/
-│   └── src/
-├── alpamayo-recipes/
-│   ├── recipes/alpamayo2_sft/
-│   ├── src/
-│   └── scripts/download_pai.py
-├── alpamayo2-super/
-│   ├── config.json
-│   ├── model.safetensors.index.json
-│   ├── model-00001-of-00015.safetensors
-│   ├── …                          # 共 15 个权重分片
-│   └── model-00015-of-00015.safetensors
-└── PhysicalAI-Autonomous-Vehicles-stage1-7cam/
-    ├── clip_index.parquet
-    ├── features.csv
-    ├── calibration/
-    │   ├── camera_intrinsics/
-    │   └── sensor_extrinsics/
-    ├── camera/                    # 5.2 中指定的 7 路相机目录
-    └── labels/egomotion/
+├── TurboPhysAI/                                      # TurboPhysAI 框架、Alpamayo2 优化代码和配置
+├── deepspeed/                                        # 海光版 DeepSpeed 的独立安装目录
+├── alpamayo2/                                        # Alpamayo2 模型源码
+├── alpamayo-recipes/                                 # 官方训练配方、训练入口和数据下载工具
+├── alpamayo2-super/                                  # 预训练权重、模型配置及 tokenizer/processor 文件
+└── PhysicalAI-Autonomous-Vehicles-stage1-7cam/         # 7 路相机视频、标定、egomotion 标签及数据索引
 ```
 
 启动第 6 节训练后才会生成 `logs/`、`outputs/` 及 runtime 中指定的 `alpamayo2-compile/` 编译缓存；native 扩展缓存由 Turbo 自动管理。
